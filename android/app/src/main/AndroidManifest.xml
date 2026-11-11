@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- HU03: la nota de turno se redacta con la API de Claude. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="notemed"
         android:name="${applicationName}"

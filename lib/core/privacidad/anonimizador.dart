@@ -14,6 +14,7 @@ class Anonimizador {
   Anonimizador();
 
   final Map<String, String> _tabla = {};
+  final Map<String, String> _originales = {};
   final Map<String, int> _contadores = {};
 
   static const _letra = r'[\p{L}\p{N}]';
@@ -48,13 +49,19 @@ class Anonimizador {
   /// autorizado y no se debe persistir junto a la nota.
   Map<String, String> get tablaReidentificacion => Map.unmodifiable(_tabla);
 
-  String _codigo(String prefijo, String clave) {
+  /// TSK-31: código → texto tal como apareció la primera vez en la entrada.
+  /// Solo vive en memoria; sirve para restaurar la respuesta en pantalla.
+  Map<String, String> get originales => Map.unmodifiable(_originales);
+
+  String _codigo(String prefijo, String clave, String original) {
     final k = '$prefijo|$clave';
-    return _tabla.putIfAbsent(k, () {
+    final codigo = _tabla.putIfAbsent(k, () {
       final n = (_contadores[prefijo] ?? 0) + 1;
       _contadores[prefijo] = n;
       return '$prefijo-${n.toString().padLeft(3, '0')}';
     });
+    _originales.putIfAbsent(codigo, () => original);
+    return codigo;
   }
 
   /// Anonimiza [texto]. [nombresConocidos] son los nombres completos de los
@@ -69,9 +76,10 @@ class Anonimizador {
       final partes = nombre.trim().split(RegExp(r'\s+'))
         ..removeWhere((p) => p.isEmpty);
       if (partes.isEmpty) continue;
-      final codigo = _codigo('PAC', normalizar(partes.join(' ')));
+      final completo = partes.join(' ');
+      final codigo = _codigo('PAC', normalizar(completo), completo);
       final candidatos = <String>[
-        partes.join(' '),
+        completo,
         ...partes.where(_esParteIdentificable),
       ];
       for (final c in candidatos) {
@@ -84,19 +92,19 @@ class Anonimizador {
       final completo = m[0]!;
       final nombre = m[1]!;
       final tratamiento = completo.substring(0, completo.length - nombre.length);
-      return '$tratamiento${_codigo('PAC', normalizar(nombre))}';
+      return '$tratamiento${_codigo('PAC', normalizar(nombre), nombre)}';
     });
 
     // 3. Cama/habitación (antes que los documentos, para no tomar números de cama).
     salida = salida.replaceAllMapped(_cama, (m) {
       final numero = RegExp(r'[A-Za-z]?-?\d+[A-Za-z]?$').firstMatch(m[0]!)![0]!;
-      return _codigo('CAMA', numero.toUpperCase().replaceAll('-', ''));
+      return _codigo('CAMA', numero.toUpperCase().replaceAll('-', ''), m[0]!);
     });
 
     // 4. Documentos de identidad.
     salida = salida.replaceAllMapped(
       _documento,
-      (m) => _codigo('ID', m[0]!.replaceAll('.', '')),
+      (m) => _codigo('ID', m[0]!.replaceAll('.', ''), m[0]!),
     );
 
     return salida;
@@ -106,14 +114,23 @@ class Anonimizador {
   /// cama o alguno de los [nombres]. Sirve para verificar antes de exportar.
   static bool contieneDatosPersonales(String texto,
       {Iterable<String> nombres = const []}) {
-    if (_documento.hasMatch(texto) || _cama.hasMatch(texto)) return true;
+    // Los códigos propios ("CAMA-001") no son datos personales, pero el
+    // patrón de cama los tomaría como "cama 001".
+    final t = texto.replaceAll(codigoAnonimo, ' ');
+    if (_documento.hasMatch(t) || _cama.hasMatch(t)) return true;
     for (final n in nombres) {
       for (final p in n.split(RegExp(r'\s+')).where(_esParteIdentificable)) {
-        if (_patronFlexible(p).hasMatch(texto)) return true;
+        if (_patronFlexible(p).hasMatch(t)) return true;
       }
     }
     return false;
   }
+
+  /// Códigos que genera el anonimizador: `PAC-001`, `ID-002`, `CAMA-003`.
+  static final RegExp codigoAnonimo = RegExp(
+    r'(?<![\p{L}\p{N}])(?:PAC|ID|CAMA)-\d{3,}(?!\d)',
+    unicode: true,
+  );
 
   /// Partículas de nombres compuestos que no se reemplazan solas, porque
   /// también son palabras comunes del texto clínico.

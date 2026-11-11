@@ -1,8 +1,10 @@
-/// TSK-05 · HU02: pantalla de la escala de Braden.
+/// TSK-05 · HU02: pantalla de la escala de Braden. Muestra las
+/// recomendaciones de cuidado si el riesgo es alto (TSK-08).
 library;
 
 import 'package:flutter/material.dart';
 
+import '../recomendaciones_riesgo.dart';
 import 'braden_escala.dart';
 
 class BradenScreen extends StatefulWidget {
@@ -33,6 +35,10 @@ class _BradenScreenState extends State<BradenScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
+          TarjetaRecomendaciones(
+            titulo: 'Riesgo de lesiones por presión: recomendaciones',
+            recomendaciones: recomendacionesBraden(_evaluacion.nivel),
+          ),
           for (final subescala in SubescalaBraden.values)
             _SubescalaCard(
               subescala: subescala,

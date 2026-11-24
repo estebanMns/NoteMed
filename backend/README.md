@@ -85,7 +85,7 @@ python3.13 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 cp .env.example .env              # ajuste valores; no suba .env
 ./.venv/bin/alembic upgrade head  # crea el esquema
 ./.venv/bin/uvicorn app.main:create_app --factory --reload
-./.venv/bin/python -m scripts.crear_token --sub ENF-01 --rol enfermero
+./.venv/bin/python -m scripts.crear_token --sub enfermera1 --rol enfermera
 ```
 
 Con Docker: `docker compose up --build` (define `POSTGRES_PASSWORD` en `.env`).

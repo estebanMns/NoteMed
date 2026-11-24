@@ -22,15 +22,20 @@ from app.api.esquemas import (
     PacienteSalida,
     RevisionEntrada,
     SesionSalida,
+    UsuarioAdminSalida,
+    UsuarioEditarEntrada,
+    UsuarioNuevoEntrada,
     UsuarioSesion,
 )
-from app.db.modelos import NotaORM
+from app.db.modelos import NotaORM, UsuarioORM
 from app.domain.nota import TipoNota
 from app.fhir import documento_fhir
 from app.ia.texto_libre import generar_texto
 from app.seguridad import Actor
 from app.servicios.autenticacion import ServicioAutenticacion
 from app.servicios.notas import ServicioNotas
+from app.servicios.sesiones import ServicioSesiones
+from app.servicios.usuarios import ServicioUsuarios
 
 router = APIRouter(prefix="/v1")
 Servicio = Annotated[ServicioNotas, Depends(get_servicio)]
@@ -92,7 +97,7 @@ def iniciar_sesion(
     sesion: Annotated[Session, Depends(get_sesion)],
 ) -> SesionSalida:
     """Contrato sección 2: usuario y clave -> JWT."""
-    datos = ServicioAutenticacion(sesion, request.app.state.settings).iniciar_sesion(
+    datos = ServicioAutenticacion(sesion, request.app.state.settings, request.app.state.reloj).iniciar_sesion(
         entrada.usuario, entrada.clave
     )
     return SesionSalida(
@@ -104,6 +109,71 @@ def iniciar_sesion(
             rol=datos.rol,
         ),
     )
+
+
+@router.post("/auth/cierre", status_code=status.HTTP_204_NO_CONTENT)
+def cerrar_sesion(
+    actor: ActorDep,
+    sesion: Annotated[Session, Depends(get_sesion)],
+    request: Request,
+) -> Response:
+    if actor.jti:
+        ServicioSesiones(sesion, request.app.state.settings, request.app.state.reloj).cerrar(actor.jti)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _admin(request: Request, sesion: Session) -> ServicioUsuarios:
+    return ServicioUsuarios(sesion, request.app.state.settings, request.app.state.reloj)
+
+
+def _salida_usuario(u: UsuarioORM) -> UsuarioAdminSalida:
+    return UsuarioAdminSalida(
+        usuario=u.usuario, tarjetaProfesional=u.tarjeta_profesional, rol=u.rol, activo=u.activo
+    )
+
+
+@router.get("/usuarios", response_model=list[UsuarioAdminSalida])
+def listar_usuarios(
+    actor: ActorDep,
+    request: Request,
+    sesion: Annotated[Session, Depends(get_sesion)],
+    incluir_inactivos: bool = False,
+) -> list[UsuarioAdminSalida]:
+    return [_salida_usuario(u) for u in _admin(request, sesion).listar(actor, incluir_inactivos)]
+
+
+@router.post("/usuarios", response_model=UsuarioAdminSalida, status_code=status.HTTP_201_CREATED)
+def crear_usuario(
+    entrada: UsuarioNuevoEntrada,
+    actor: ActorDep,
+    request: Request,
+    sesion: Annotated[Session, Depends(get_sesion)],
+) -> UsuarioAdminSalida:
+    usuario = _admin(request, sesion).crear(actor, entrada.usuario, entrada.clave, entrada.tarjetaProfesional)
+    return _salida_usuario(usuario)
+
+
+@router.put("/usuarios/{usuario}", response_model=UsuarioAdminSalida)
+def editar_usuario(
+    usuario: str,
+    entrada: UsuarioEditarEntrada,
+    actor: ActorDep,
+    request: Request,
+    sesion: Annotated[Session, Depends(get_sesion)],
+) -> UsuarioAdminSalida:
+    editado = _admin(request, sesion).editar(actor, usuario, entrada.tarjetaProfesional, entrada.clave)
+    return _salida_usuario(editado)
+
+
+@router.delete("/usuarios/{usuario}", status_code=status.HTTP_204_NO_CONTENT)
+def dar_de_baja_usuario(
+    usuario: str,
+    actor: ActorDep,
+    request: Request,
+    sesion: Annotated[Session, Depends(get_sesion)],
+) -> Response:
+    _admin(request, sesion).dar_de_baja(actor, usuario)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/ia/borradores", response_model=IaRespuesta)

@@ -50,6 +50,11 @@ backend/
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
 | POST | `/v1/auth/sesiones` | público | Usuario y clave → JWT (contrato sección 2) |
+| POST | `/v1/auth/cierre` | cualquiera autenticado | Cierra la sesión actual |
+| GET | `/v1/usuarios` | jefe | Lista el personal (`?incluir_inactivos=true` para ver las bajas) |
+| POST | `/v1/usuarios` | jefe | Da de alta una enfermera |
+| PUT | `/v1/usuarios/{usuario}` | jefe | Edita tarjeta o clave (cambiar la clave cierra sus sesiones) |
+| DELETE | `/v1/usuarios/{usuario}` | jefe | Da de baja (baja lógica; cierra sus sesiones) |
 | POST | `/v1/pacientes` | enfermera | Registra un paciente por seudónimo (`PAC-###`) |
 | GET | `/v1/pacientes/{id}/notas` | autor / jefe | Notas del paciente |
 | POST | `/v1/notas/borradores` | enfermera | Genera el borrador con IA (201; 200 si ya existía) |
@@ -63,10 +68,17 @@ backend/
 Errores con cuerpo `{"error": "...", "mensaje": "...", "motivos": [...]}`:
 401 sin token válido · 403 sin permiso · 404 · 409 conflicto de versión o estado · 422 nota no firmable o datos no seguros · 503 la IA no respondió.
 
+## Sesiones
+
+- Cada inicio de sesión abre una sesión guardada en la base de datos. El JWT lleva su identificador (`jti`).
+- **Inactividad:** si pasan **2 minutos** sin peticiones con esa sesión, se cierra y la siguiente petición responde 401 con `codigo: "sesion_inactiva"`. Cada petición válida renueva el plazo. Configurable con `NOTEMED_SESION_INACTIVIDAD_MINUTOS`.
+- Otros códigos de 401: `sesion_cerrada` (cierre manual o baja), `sesion_vencida` (tope de `NOTEMED_JWT_HORAS_EXPIRACION`).
+- La app debe volver a la pantalla de inicio de sesión al recibir cualquiera de estos 401.
+
 ## Personal y roles
 
 - **`enfermera`:** registra pacientes, genera borradores, revisa y firma sus propias notas.
-- **`jefe`:** consulta las métricas de validación (`GET /v1/metricas/borradores`). No firma notas ajenas.
+- **`jefe`:** administra las cuentas de enfermería (alta, edición y baja) y consulta las métricas de validación. No firma notas ajenas ni administra otras cuentas de jefe.
 
 Los usuarios los da de alta una persona administradora (no hay registro público):
 

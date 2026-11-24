@@ -23,10 +23,13 @@ from app.domain.errores import (
     NotaNoFirmable,
     PacienteExistente,
     PacienteNoEncontrado,
+    SesionInvalida,
     TransicionInvalida,
     UsuarioExistente,
+    UsuarioNoEncontrado,
 )
 from app.ia.modelo import ModeloLenguaje, crear_modelo
+from app.servicios.sesiones import ahora_utc
 
 _CODIGOS: dict[type[ErrorDominio], tuple[int, str]] = {
     NotaNoEncontrada: (404, "nota_no_encontrada"),
@@ -34,6 +37,7 @@ _CODIGOS: dict[type[ErrorDominio], tuple[int, str]] = {
     PacienteExistente: (409, "paciente_existente"),
     UsuarioExistente: (409, "usuario_existente"),
     CredencialesInvalidas: (401, "credenciales_invalidas"),
+    UsuarioNoEncontrado: (404, "usuario_no_encontrado"),
     ConflictoVersion: (409, "conflicto_version"),
     TransicionInvalida: (409, "transicion_invalida"),
     NoAutorizado: (403, "no_autorizado"),
@@ -59,6 +63,8 @@ def create_app(
     app.state.settings = settings
     app.state.modelo = modelo or crear_modelo(settings)
     app.state.fabrica_sesiones = fabrica_sesiones(motor)
+    # Reloj inyectable: las pruebas lo adelantan para simular la inactividad.
+    app.state.reloj = ahora_utc
 
     # Formato de error acordado con la app (docs/contrato_api.md):
     # {"error": "mensaje para mostrar", "codigo": "identificador", ...}
@@ -71,6 +77,9 @@ def create_app(
                 "codigo": codigo,
                 "motivos": error.motivos,
             }
+        elif isinstance(error, SesionInvalida):
+            status, codigo = 401, error.codigo
+            contenido = {"error": str(error), "codigo": codigo}
         else:
             status, codigo = _CODIGOS.get(type(error), (400, "error_dominio"))
             contenido = {"error": str(error), "codigo": codigo}

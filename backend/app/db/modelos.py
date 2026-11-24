@@ -93,3 +93,16 @@ class UsuarioORM(Base):
     tarjeta_profesional: Mapped[str] = mapped_column(String(32))
     rol: Mapped[str] = mapped_column(String(12))
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+
+
+class SesionORM(Base):
+    """Sesión iniciada. Controla la expiración por inactividad y el cierre."""
+
+    __tablename__ = "sesiones"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # = claim jti
+    usuario_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id", ondelete="RESTRICT"), index=True)
+    creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ultima_actividad: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expira: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revocada: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")

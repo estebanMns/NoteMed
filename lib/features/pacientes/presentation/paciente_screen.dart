@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:notemed/app/providers.dart';
+import 'package:notemed/features/auth/presentation/sesion.dart';
 
 import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
 import 'package:notemed/features/notas/domain/servicio_ia.dart';
@@ -253,7 +254,8 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
     await _cargar();
   }
 
-  String? get _tarjetaProfesional => null;
+  String? get _tarjetaProfesional =>
+      ref.read(sesionProvider)?.tarjetaProfesional;
 
   Future<void> _verNota(NotaClinica nota) async {
     if (nota.firma == null) return _abrirBorrador(nota);

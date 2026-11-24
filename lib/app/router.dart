@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:notemed/app/providers.dart';
+import 'package:notemed/features/auth/presentation/login_screen.dart';
+import 'package:notemed/features/auth/presentation/sesion.dart';
 import 'package:notemed/features/inicio/presentation/inicio_screen.dart';
 import 'package:notemed/features/metricas/presentation/metricas_screen.dart';
 import 'package:notemed/features/notas/presentation/entrega_turno_screen.dart';
@@ -18,6 +20,7 @@ import 'package:notemed/features/valoracion/presentation/downton_screen.dart';
 
 abstract final class Rutas {
   static const inicio = '/';
+  static const login = '/login';
   static const pacientes = '/pacientes';
   static String paciente(int id) => '/pacientes/$id';
   static const braden = '/braden';
@@ -27,8 +30,24 @@ abstract final class Rutas {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
+  // go_router vuelve a evaluar la redirección cuando cambia la sesión.
+  final cambioSesion = ValueNotifier(0);
+  ref.listen(sesionProvider, (_, _) => cambioSesion.value++);
+
   final router = GoRouter(
+    refreshListenable: cambioSesion,
+    redirect: (_, estado) {
+      final usuario = ref.read(sesionProvider);
+      final enLogin = estado.matchedLocation == Rutas.login;
+      if (usuario == null) return enLogin ? null : Rutas.login;
+      if (enLogin) return Rutas.inicio;
+      if (estado.matchedLocation == Rutas.metricas && !usuario.rol.veMetricas) {
+        return Rutas.inicio;
+      }
+      return null;
+    },
     routes: [
+      GoRoute(path: Rutas.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: Rutas.inicio,
         builder: (_, _) => const InicioScreen(),
@@ -52,7 +71,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
-  ref.onDispose(router.dispose);
+  ref.onDispose(() {
+    router.dispose();
+    cambioSesion.dispose();
+  });
   return router;
 });
 

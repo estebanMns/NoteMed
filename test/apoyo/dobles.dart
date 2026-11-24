@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:notemed/app/app.dart';
 import 'package:notemed/app/providers.dart';
+import 'package:notemed/features/auth/domain/usuario.dart';
+import 'package:notemed/features/auth/presentation/sesion.dart';
 import 'package:notemed/features/notas/application/servicio_notas.dart';
 import 'package:notemed/features/metricas/domain/metrica_nota.dart';
 import 'package:notemed/features/metricas/domain/repositorio_metricas.dart';
@@ -67,6 +69,12 @@ class RedSimulada implements EstadoRed {
 
   Future<void> cerrar() => _cambios.close();
 }
+
+const enfermeraPrueba = Usuario(
+  usuario: 'enfermera1',
+  tarjetaProfesional: 'TP-10001',
+  rol: Rol.enfermera,
+);
 
 const pacienteEjemplo = Paciente(
   nombre: 'María Fernanda Gómez',
@@ -221,6 +229,7 @@ Widget conDependencias({
   EstadoRed? red,
   ServicioNotas? servicio,
   RepositorioMetricas? metricas,
+  Usuario? sesion = enfermeraPrueba,
   Widget? hijo,
 }) {
   final metricasUsadas = metricas ?? MetricasMemoria();
@@ -228,6 +237,7 @@ Widget conDependencias({
   final redUsada = red ?? RedSimulada();
   return ProviderScope(
     overrides: [
+      sesionProvider.overrideWith(() => SesionNotifier(sesion)),
       repositorioProvider.overrideWithValue(repo),
       repositorioMetricasProvider.overrideWithValue(metricasUsadas),
       servicioIAProvider.overrideWithValue(iaUsada),

@@ -7,12 +7,14 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:notemed/app/providers.dart';
 import 'package:notemed/app/router.dart';
+import 'package:notemed/features/auth/presentation/sesion.dart';
 
 class InicioScreen extends ConsumerWidget {
   const InicioScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final usuario = ref.watch(sesionProvider);
     Widget opcion({
       required String key,
       required IconData icono,
@@ -31,10 +33,30 @@ class InicioScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('NoteMed')),
+      appBar: AppBar(
+        title: const Text('NoteMed'),
+        actions: [
+          IconButton(
+            key: const Key('cerrar-sesion'),
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout),
+            onPressed: () => ref.read(sesionProvider.notifier).cerrar(),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (usuario != null)
+            ListTile(
+              key: const Key('usuario-actual'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.badge_outlined),
+              title: Text(usuario.usuario),
+              subtitle: Text(
+                '${usuario.rol.etiqueta} · ${usuario.tarjetaProfesional}',
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Chip(
@@ -71,13 +93,14 @@ class InicioScreen extends ConsumerWidget {
             subtitulo: 'Nota SBAR y balance de líquidos',
             ruta: Rutas.turno,
           ),
-          opcion(
-            key: 'menu-metricas',
-            icono: Icons.insights_outlined,
-            titulo: 'Métricas de validación',
-            subtitulo: 'Aceptación y edición de los borradores de la IA',
-            ruta: Rutas.metricas,
-          ),
+          if (usuario?.rol.veMetricas ?? false)
+            opcion(
+              key: 'menu-metricas',
+              icono: Icons.insights_outlined,
+              titulo: 'Métricas de validación',
+              subtitulo: 'Aceptación y edición de los borradores de la IA',
+              ruta: Rutas.metricas,
+            ),
         ],
       ),
     );

@@ -192,3 +192,26 @@ def test_paciente_duplicado_da_409(cliente, enfermera):
     _crear_paciente(cliente, enfermera, "PAC-010")
     r = cliente.post("/v1/pacientes", json={"pseudonimo": "PAC-010"}, headers=enfermera)
     assert r.status_code == 409
+
+
+def test_revision_con_cama_y_documento_originales_se_puede_firmar(cliente, enfermera):
+    """Regresión: el número de cama y el documento son correctos aunque la
+    entrada seudonimizada solo tenga los códigos CAMA-001 e ID-001."""
+    paciente_id = _crear_paciente(cliente, enfermera, "PAC-020")
+    nota_id = str(uuid.uuid4())
+    r = cliente.post(
+        "/v1/notas/borradores",
+        json={
+            "id": nota_id,
+            "paciente_id": paciente_id,
+            "tipo": "recibo",
+            "datos": "Paciente Ana Torres, C.C. 1.023.456.789, cama 12. TA 120/80.",
+            "nombres_conocidos": ["Ana Torres"],
+        },
+        headers=enfermera,
+    )
+    assert r.status_code == 201
+    texto = "Paciente Ana Torres, C.C. 1.023.456.789, cama 12. TA 120/80."
+    cliente.put(f"/v1/notas/{nota_id}/revision", json={"version": 1, "texto": texto}, headers=enfermera)
+    r = cliente.post(f"/v1/notas/{nota_id}/firma", json={"version": 2}, headers=enfermera)
+    assert r.status_code == 200, r.text

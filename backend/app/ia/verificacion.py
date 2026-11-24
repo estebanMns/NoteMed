@@ -11,6 +11,7 @@ enfermera los corrija o los acepte (Human-in-the-Loop)."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 import regex
@@ -19,6 +20,7 @@ from app.siglas.filtro import FiltroSiglas, Hallazgo
 
 _CODIGO = regex.compile(r"\b(?:PAC|CAMA|ID)-\d{3}\b")
 _CIFRA = regex.compile(r"\d+")
+_PUNTO_MILES = regex.compile(r"(?<=\d)\.(?=\d{3}\b)")
 
 
 @dataclass(frozen=True)
@@ -46,10 +48,23 @@ class Verificacion:
         return [h.mensaje for h in self.datos] + [h.mensaje for h in self.siglas]
 
 
-def verificar(borrador: str, entrada: str, filtro: FiltroSiglas | None = None) -> Verificacion:
+def _cifras(texto: str) -> list[str]:
+    """Cifras de un texto. Los puntos de miles (1.023.456.789) se quitan para
+    que un documento se compare como un solo número."""
+    return _CIFRA.findall(_PUNTO_MILES.sub("", texto))
+
+
+def verificar(
+    borrador: str,
+    entrada: str,
+    filtro: FiltroSiglas | None = None,
+    valores_identificadores: Iterable[str] = (),
+) -> Verificacion:
     filtro = filtro or FiltroSiglas()
     codigos_entrada = set(_CODIGO.findall(entrada))
-    cifras_entrada = set(_CIFRA.findall(_CODIGO.sub(" ", entrada)))
+    cifras_entrada = set(_cifras(_CODIGO.sub(" ", entrada)))
+    for valor in valores_identificadores:
+        cifras_entrada.update(_cifras(valor))
 
     hallazgos: list[HallazgoDato] = []
     for codigo in dict.fromkeys(_CODIGO.findall(borrador)):
@@ -57,7 +72,7 @@ def verificar(borrador: str, entrada: str, filtro: FiltroSiglas | None = None) -
             hallazgos.append(HallazgoDato("codigo_desconocido", codigo))
 
     borrador_sin_codigos = _CODIGO.sub(" ", borrador)
-    for cifra in dict.fromkeys(_CIFRA.findall(borrador_sin_codigos)):
+    for cifra in dict.fromkeys(_cifras(borrador_sin_codigos)):
         if cifra not in cifras_entrada:
             hallazgos.append(HallazgoDato("cifra_no_sustentada", cifra))
 

@@ -92,6 +92,17 @@ class Anonimizador:
             self._tabla[k] = f"{prefijo}-{n:03d}"
         return self._tabla[k]
 
+    def valores_identificadores(self) -> tuple[str, ...]:
+        """Números originales de camas y documentos (sin puntos). Sirven para que la
+        verificación reconozca cifras correctas que ya no aparecen en la entrada
+        seudonimizada. Nunca salen del backend."""
+        return tuple(
+            clave
+            for clave_completa in self._tabla
+            for prefijo, _, clave in [clave_completa.partition("|")]
+            if prefijo in ("CAMA", "ID")
+        )
+
     def anonimizar(self, texto: str, nombres_conocidos: Iterable[str] = ()) -> str:
         salida = texto
 

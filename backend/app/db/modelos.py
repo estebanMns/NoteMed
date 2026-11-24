@@ -51,6 +51,8 @@ class NotaORM(Base):
     texto_final: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Datos seudonimizados de entrada: permiten re-verificar la nota al revisarla.
     entrada_anonima: Mapped[str] = mapped_column(Text)
+    # Números originales de cama y documento (JSON). Local a la nota; permiten verificar.
+    valores_identificadores_json: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
     hallazgos_json: Mapped[str] = mapped_column(Text, default="[]")
     prompt_version: Mapped[str] = mapped_column(String(32))
 

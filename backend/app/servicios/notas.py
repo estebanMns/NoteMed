@@ -125,6 +125,7 @@ class ServicioNotas:
             texto_borrador=borrador.texto,
             texto_final=None,
             entrada_anonima=borrador.entrada_anonima,
+            valores_identificadores_json=json.dumps(list(borrador.valores_identificadores)),
             hallazgos_json=json.dumps(borrador.verificacion.mensajes(), ensure_ascii=False),
             prompt_version=borrador.prompt_version,
             creada_por=actor.sub,
@@ -150,7 +151,7 @@ class ServicioNotas:
         estado_actual = EstadoNota(nota.estado)
         transicion = revisar(estado_actual, texto)
 
-        verificacion = verificar(texto, nota.entrada_anonima, self._filtro)
+        verificacion = verificar(texto, nota.entrada_anonima, self._filtro, self._valores(nota))
         self._actualizar_condicional(
             nota,
             version,
@@ -176,7 +177,9 @@ class ServicioNotas:
         texto = nota.texto_final or nota.texto_borrador
         motivos = validar_firma(texto, EstadoNota(nota.estado), actor.sub, self._filtro)
         # Valores que no aparecen en los datos registrados también bloquean la firma.
-        motivos.extend(v.mensaje for v in verificar(texto, nota.entrada_anonima, self._filtro).datos)
+        motivos.extend(
+            v.mensaje for v in verificar(texto, nota.entrada_anonima, self._filtro, self._valores(nota)).datos
+        )
         if motivos:
             raise NotaNoFirmable(motivos)
 
@@ -217,6 +220,10 @@ class ServicioNotas:
         )
 
     # ---------- internos ----------
+
+    @staticmethod
+    def _valores(nota: NotaORM) -> list[str]:
+        return json.loads(nota.valores_identificadores_json)
 
     @staticmethod
     def _exigir_enfermero(actor: Actor) -> None:

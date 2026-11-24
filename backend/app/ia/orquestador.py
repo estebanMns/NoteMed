@@ -29,6 +29,7 @@ class Borrador:
     texto: str
     entrada_anonima: str
     verificacion: Verificacion
+    valores_identificadores: tuple[str, ...] = ()
     prompt_version: str = PROMPT_VERSION
 
 
@@ -68,7 +69,13 @@ class GeneradorBorrador:
         if Anonimizador.contiene_datos_personales(entrada, nombres=nombres_pacientes):
             raise DatosNoSeguros("Quedan datos personales en la entrada; no se envía al modelo.")
 
+        valores = anon.valores_identificadores()
         salida = self._modelo.generar(instruccion_para(tipo), entrada)
-        verificacion = verificar(salida, entrada)
+        verificacion = verificar(salida, entrada, valores_identificadores=valores)
         texto = reidentificar(salida, anon, nombres_pacientes)
-        return Borrador(texto=texto, entrada_anonima=entrada, verificacion=verificacion)
+        return Borrador(
+            texto=texto,
+            entrada_anonima=entrada,
+            verificacion=verificacion,
+            valores_identificadores=valores,
+        )

@@ -15,9 +15,9 @@ Proyecto de grado — Ingeniería de Software, Universidad Cooperativa de Colomb
 | Anonimización Ley 1581 (HU08) | Implementada (dominio, sin conectar a pantallas) |
 | Filtro de siglas Ley 911 (HU06) | Implementada (dominio, sin conectar a pantallas) |
 | Escala de Downton | Dominio implementado, sin pantalla |
-| Borrador con IA y firma (casos de uso) | Dominio implementado; proveedor real pendiente (solo `LlmSimulado`) |
+| Borrador con IA y firma (casos de uso) | Implementado en el backend (`backend/`); la app Flutter aún no lo consume |
 | Persistencia offline cifrada (SQLite/SQLCipher) | Pendiente |
-| Sincronización y API (backend, FHIR) | Pendiente (backend en otro repositorio) |
+| API REST, FHIR y auditoría (backend) | Implementado en `backend/`; falta integrar identidad del hospital |
 | Métricas (aceptación, edición, SUS) | Pendiente |
 
 ## Arquitectura
@@ -50,6 +50,10 @@ Flujo de una nota con IA:
 3. El modelo (detrás de `LlmGateway`) devuelve el borrador.
 4. Se re-identifica localmente y se pasa el filtro de siglas.
 5. La enfermera revisa (`borrador → revisada`) y firma (`FirmarNota`), que rechaza siglas prohibidas o texto vacío.
+
+## Backend
+
+La API y el componente de IA están en [`backend/`](backend/README.md) (FastAPI, PostgreSQL, Alembic).
 
 ## Desarrollo
 

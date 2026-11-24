@@ -1,111 +1,87 @@
 /// HU01: lista de pacientes guardados en el celular.
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:notemed/app/providers.dart';
+import 'package:notemed/app/router.dart';
 import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
-import 'package:notemed/features/notas/application/servicio_notas.dart';
-import 'package:notemed/features/pacientes/domain/paciente.dart';
 import 'package:notemed/features/pacientes/presentation/paciente_form_screen.dart';
-import 'package:notemed/features/pacientes/presentation/paciente_screen.dart';
 
-class PacientesScreen extends StatefulWidget {
-  const PacientesScreen({
-    super.key,
-    required this.repositorio,
-    required this.servicioNotas,
-  });
+class PacientesScreen extends ConsumerWidget {
+  const PacientesScreen({super.key});
 
-  final RepositorioPacientes repositorio;
-  final ServicioNotas servicioNotas;
-
-  @override
-  State<PacientesScreen> createState() => _PacientesScreenState();
-}
-
-class _PacientesScreenState extends State<PacientesScreen> {
-  late Future<List<Paciente>> _pacientes = widget.repositorio.pacientes();
-
-  void _recargar() {
-    if (!mounted) return;
-    setState(() {
-      _pacientes = widget.repositorio.pacientes();
-    });
+  Future<void> _abrirPaciente(
+    BuildContext context,
+    WidgetRef ref,
+    int id,
+  ) async {
+    await context.push(Rutas.paciente(id));
+    ref.invalidate(pacientesProvider);
   }
 
-  Future<void> _abrir(Widget pantalla) async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => pantalla));
-    _recargar();
-  }
-
-  void _nuevo() => _abrir(
-    PacienteFormScreen(
-      onGuardar: (p) async {
-        final navegador = Navigator.of(context);
-        final mensajero = ScaffoldMessenger.of(context);
-        try {
-          final guardado = await widget.repositorio.guardarPaciente(p);
-          navegador.pop();
-          _abrir(
-            PacienteScreen(
-              paciente: guardado,
-              repositorio: widget.repositorio,
-              servicioNotas: widget.servicioNotas,
-            ),
-          );
-        } on PacienteDuplicado catch (e) {
-          mensajero.showSnackBar(SnackBar(content: Text('$e')));
-        }
-      },
-    ),
-  );
+  void _nuevo(BuildContext context, WidgetRef ref) =>
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (formulario) => PacienteFormScreen(
+            onGuardar: (p) async {
+              final navegador = Navigator.of(formulario);
+              final mensajero = ScaffoldMessenger.of(formulario);
+              try {
+                final guardado = await ref
+                    .read(repositorioProvider)
+                    .guardarPaciente(p);
+                ref.invalidate(pacientesProvider);
+                navegador.pop();
+                if (context.mounted) {
+                  await _abrirPaciente(context, ref, guardado.id!);
+                }
+              } on PacienteDuplicado catch (e) {
+                mensajero.showSnackBar(SnackBar(content: Text('$e')));
+              }
+            },
+          ),
+        ),
+      );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Pacientes')),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('pacientes-nuevo'),
-        onPressed: _nuevo,
+        onPressed: () => _nuevo(context, ref),
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Nuevo paciente'),
       ),
-      body: FutureBuilder<List<Paciente>>(
-        future: _pacientes,
-        builder: (context, snap) {
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final lista = snap.data!;
-          if (lista.isEmpty) {
-            return const Center(child: Text('No hay pacientes registrados.'));
-          }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [
-              for (final p in lista)
-                Card(
-                  child: ListTile(
-                    key: Key('paciente-${p.id}'),
-                    leading: CircleAvatar(child: Text(p.cama)),
-                    title: Text(p.nombre),
-                    subtitle: Text('Cédula ${p.cedula} · ${p.edad} años'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _abrir(
-                      PacienteScreen(
-                        paciente: p,
-                        repositorio: widget.repositorio,
-                        servicioNotas: widget.servicioNotas,
-                      ),
-                    ),
+      body: ref
+          .watch(pacientesProvider)
+          .when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('$e')),
+            data: (lista) => lista.isEmpty
+                ? const Center(child: Text('No hay pacientes registrados.'))
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                    children: [
+                      for (final p in lista)
+                        Card(
+                          child: ListTile(
+                            key: Key('paciente-${p.id}'),
+                            leading: CircleAvatar(child: Text(p.cama)),
+                            title: Text(p.nombre),
+                            subtitle: Text(
+                              'Cédula ${p.cedula} · ${p.edad} años',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => _abrirPaciente(context, ref, p.id!),
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-            ],
-          );
-        },
-      ),
+          ),
     );
   }
 }

@@ -263,12 +263,10 @@ void main() {
 
     Future<void> abrir(WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: PacienteScreen(
-            paciente: paciente,
-            repositorio: repo,
-            servicioNotas: servicio,
-          ),
+        conDependencias(
+          repo: repo,
+          servicio: servicio,
+          hijo: PacienteScreen(paciente: paciente),
         ),
       );
       await tester.pumpAndSettle();

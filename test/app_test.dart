@@ -1,14 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:notemed/features/notas/application/servicio_notas.dart';
-import 'package:notemed/main.dart';
-
 import 'apoyo/dobles.dart';
 
 void main() {
   testWidgets('el menú principal abre la escala de Braden', (tester) async {
-    await tester.pumpWidget(const NoteMedApp());
+    await tester.pumpWidget(conDependencias(repo: RepositorioMemoria()));
 
     expect(find.text('Escala de Braden'), findsOneWidget);
     expect(find.text('Entrega de turno'), findsOneWidget);
@@ -19,7 +16,7 @@ void main() {
   });
 
   testWidgets('el menú principal abre la entrega de turno', (tester) async {
-    await tester.pumpWidget(const NoteMedApp());
+    await tester.pumpWidget(conDependencias(repo: RepositorioMemoria()));
     await tester.tap(find.byKey(const Key('menu-turno')));
     await tester.pumpAndSettle();
     expect(find.text('Balance de líquidos'), findsOneWidget);
@@ -27,36 +24,17 @@ void main() {
   });
 
   testWidgets('el menú principal abre la escala de Downton', (tester) async {
-    await tester.pumpWidget(const NoteMedApp());
+    await tester.pumpWidget(conDependencias(repo: RepositorioMemoria()));
     await tester.tap(find.byKey(const Key('menu-downton')));
     await tester.pumpAndSettle();
     expect(find.text('Seleccione la deambulación'), findsOneWidget);
-  });
-
-  testWidgets('Pacientes se desactiva si no hay base de datos', (tester) async {
-    await tester.pumpWidget(const NoteMedApp());
-    final tile = tester.widget<ListTile>(
-      find.byKey(const Key('menu-pacientes')),
-    );
-    expect(tile.enabled, isFalse);
   });
 
   testWidgets('registra un paciente y abre su pantalla', (tester) async {
     final repo = RepositorioMemoria();
     final red = RedSimulada();
     addTearDown(red.cerrar);
-    await tester.pumpWidget(
-      NoteMedApp(
-        dependencias: Dependencias(
-          repositorio: repo,
-          servicioNotas: ServicioNotas(
-            repositorio: repo,
-            ia: IASimulada(),
-            red: red,
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(conDependencias(repo: repo, red: red));
 
     await tester.tap(find.byKey(const Key('menu-pacientes')));
     await tester.pumpAndSettle();
@@ -77,5 +55,19 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Ana Ruiz'), findsOneWidget);
+  });
+
+  testWidgets('abre un paciente existente desde la lista', (tester) async {
+    final repo = RepositorioMemoria();
+    final p = await repo.guardarPaciente(pacienteEjemplo);
+    await tester.pumpWidget(conDependencias(repo: repo));
+
+    await tester.tap(find.byKey(const Key('menu-pacientes')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('paciente-${p.id}')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cédula 1085123456 · 67 años · Cama 12B'), findsOneWidget);
+    expect(find.byKey(const Key('btn-generar-nota')), findsOneWidget);
   });
 }

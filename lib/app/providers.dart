@@ -1,0 +1,65 @@
+/// Inyección de dependencias con Riverpod. Aquí se decide qué
+/// implementación concreta usa cada interfaz del dominio; las pantallas solo
+/// conocen los providers.
+library;
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
+
+import 'package:notemed/core/red/estado_red.dart';
+import 'package:notemed/core/red/estado_red_dispositivo.dart';
+import 'package:notemed/features/notas/application/servicio_notas.dart';
+import 'package:notemed/features/notas/data/ia/claude_servicio_ia.dart';
+import 'package:notemed/features/notas/domain/servicio_ia.dart';
+import 'package:notemed/features/pacientes/data/repositorio_sqlite.dart';
+import 'package:notemed/features/pacientes/domain/paciente.dart';
+import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
+
+/// Clave de la API de Claude: `flutter run --dart-define=ANTHROPIC_API_KEY=...`
+const _claveIA = String.fromEnvironment('ANTHROPIC_API_KEY');
+
+/// Base de datos abierta en `main()`. Se sobrescribe al iniciar la app.
+final baseDatosProvider = Provider<Database>(
+  (ref) => throw UnimplementedError('Abra la base de datos en main()'),
+);
+
+final repositorioProvider = Provider<RepositorioPacientes>(
+  (ref) => RepositorioSqlite(ref.watch(baseDatosProvider)),
+);
+
+final estadoRedProvider = Provider<EstadoRed>((ref) => EstadoRedDispositivo());
+
+final servicioIAProvider = Provider<ServicioIA>(
+  (ref) => _claveIA.isEmpty
+      ? const ServicioIANoConfigurado()
+      : ClaudeServicioIA(apiKey: _claveIA),
+);
+
+/// Casos de uso de las notas. Al crearse empieza a procesar la cola de
+/// solicitudes que quedaron sin red.
+final servicioNotasProvider = Provider<ServicioNotas>((ref) {
+  final servicio = ServicioNotas(
+    repositorio: ref.watch(repositorioProvider),
+    ia: ref.watch(servicioIAProvider),
+    red: ref.watch(estadoRedProvider),
+  );
+  servicio.cola.iniciar();
+  ref.onDispose(servicio.cola.detener);
+  return servicio;
+});
+
+/// Cantidad de notas esperando red, para el aviso en pantalla.
+final pendientesProvider = StreamProvider<int>((ref) async* {
+  final cantidad = ref.watch(servicioNotasProvider).cola.cantidad;
+  yield cantidad.value;
+  yield* cantidad.cambios;
+});
+
+/// Pacientes guardados en el celular. Se invalida al crear o editar uno.
+final pacientesProvider = FutureProvider<List<Paciente>>(
+  (ref) => ref.watch(repositorioProvider).pacientes(),
+);
+
+final pacienteProvider = FutureProvider.family<Paciente?, int>(
+  (ref, id) => ref.watch(repositorioProvider).paciente(id),
+);

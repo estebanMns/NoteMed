@@ -1,6 +1,12 @@
 // Dobles de prueba: IA simulada, red simulada y repositorio en memoria.
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:notemed/app/app.dart';
+import 'package:notemed/app/providers.dart';
+import 'package:notemed/features/notas/application/servicio_notas.dart';
+
 import 'package:notemed/core/red/estado_red.dart';
 import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
 import 'package:notemed/features/sincronizacion/domain/solicitud_pendiente.dart';
@@ -189,4 +195,28 @@ class RepositorioMemoria implements RepositorioPacientes {
       ultimoError: error,
     );
   }
+}
+
+/// Monta [hijo] (o la app completa) con dependencias de prueba.
+Widget conDependencias({
+  required RepositorioPacientes repo,
+  ServicioIA? ia,
+  EstadoRed? red,
+  ServicioNotas? servicio,
+  Widget? hijo,
+}) {
+  final iaUsada = ia ?? IASimulada();
+  final redUsada = red ?? RedSimulada();
+  return ProviderScope(
+    overrides: [
+      repositorioProvider.overrideWithValue(repo),
+      servicioIAProvider.overrideWithValue(iaUsada),
+      estadoRedProvider.overrideWithValue(redUsada),
+      servicioNotasProvider.overrideWithValue(
+        servicio ??
+            ServicioNotas(repositorio: repo, ia: iaUsada, red: redUsada),
+      ),
+    ],
+    child: hijo == null ? const NoteMedApp() : MaterialApp(home: hijo),
+  );
 }

@@ -3,7 +3,10 @@
 /// las notas guardadas y el botón "Generar Nota de Turno".
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+
+import 'package:notemed/app/providers.dart';
 
 import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
 import 'package:notemed/features/notas/domain/servicio_ia.dart';
@@ -25,23 +28,16 @@ import 'package:notemed/features/pacientes/presentation/paciente_form_screen.dar
 import 'package:notemed/features/pacientes/domain/signos_vitales.dart';
 import 'package:notemed/core/utils/fechas.dart';
 
-class PacienteScreen extends StatefulWidget {
-  const PacienteScreen({
-    super.key,
-    required this.paciente,
-    required this.repositorio,
-    required this.servicioNotas,
-  });
+class PacienteScreen extends ConsumerStatefulWidget {
+  const PacienteScreen({super.key, required this.paciente});
 
   final Paciente paciente;
-  final RepositorioPacientes repositorio;
-  final ServicioNotas servicioNotas;
 
   @override
-  State<PacienteScreen> createState() => _PacienteScreenState();
+  ConsumerState<PacienteScreen> createState() => _PacienteScreenState();
 }
 
-class _PacienteScreenState extends State<PacienteScreen> {
+class _PacienteScreenState extends ConsumerState<PacienteScreen> {
   late Paciente _paciente = widget.paciente;
   List<Infusion> _infusiones = const [];
   List<ProcedimientoInvasivo> _procedimientos = const [];
@@ -60,7 +56,8 @@ class _PacienteScreenState extends State<PacienteScreen> {
   final _temp = TextEditingController();
   final _observaciones = TextEditingController();
 
-  RepositorioPacientes get _repo => widget.repositorio;
+  RepositorioPacientes get _repo => ref.read(repositorioProvider);
+  ServicioNotas get _servicio => ref.read(servicioNotasProvider);
   int get _id => _paciente.id!;
 
   @override
@@ -164,11 +161,11 @@ class _PacienteScreenState extends State<PacienteScreen> {
       _aviso('Corrija los signos vitales antes de generar la nota');
       return;
     }
-    final datos = await widget.servicioNotas.datosTurno(
+    final datos = await _servicio.datosTurno(
       _paciente,
       observaciones: _observaciones.text,
     );
-    await _resultado(await widget.servicioNotas.notaTurno(datos));
+    await _resultado(await _servicio.notaTurno(datos));
     await _cargar();
   });
 
@@ -176,7 +173,7 @@ class _PacienteScreenState extends State<PacienteScreen> {
     await _abrir<void>(
       FallecimientoScreen(
         onGenerar: (datos) => _conManejoDeErrores(() async {
-          final r = await widget.servicioNotas.notaFallecimiento(
+          final r = await _servicio.notaFallecimiento(
             _paciente,
             datos,
             procedimientos: _procedimientos,
@@ -265,6 +262,9 @@ class _PacienteScreenState extends State<PacienteScreen> {
                   final navegador = Navigator.of(context);
                   try {
                     final guardado = await _repo.guardarPaciente(p);
+                    ref
+                      ..invalidate(pacientesProvider)
+                      ..invalidate(pacienteProvider(_id));
                     setState(() => _paciente = guardado);
                     navegador.pop();
                   } on PacienteDuplicado catch (e) {
@@ -290,23 +290,20 @@ class _PacienteScreenState extends State<PacienteScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [
-                StreamBuilder<int>(
-                  stream: widget.servicioNotas.cola.cantidad.cambios,
-                  initialData: widget.servicioNotas.cola.cantidad.value,
-                  builder: (_, snap) => (snap.data ?? 0) == 0
-                      ? const SizedBox.shrink()
-                      : Card(
-                          key: const Key('aviso-pendientes'),
-                          child: ListTile(
-                            leading: const Icon(Icons.cloud_off),
-                            title: Text(
-                              snap.data == 1
-                                  ? '1 nota pendiente por falta de red'
-                                  : '${snap.data} notas pendientes por falta de red',
-                            ),
-                          ),
-                        ),
-                ),
+                switch (ref.watch(pendientesProvider).value ?? 0) {
+                  0 => const SizedBox.shrink(),
+                  final n => Card(
+                    key: const Key('aviso-pendientes'),
+                    child: ListTile(
+                      leading: const Icon(Icons.cloud_off),
+                      title: Text(
+                        n == 1
+                            ? '1 nota pendiente por falta de red'
+                            : '$n notas pendientes por falta de red',
+                      ),
+                    ),
+                  ),
+                },
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.person_outline),

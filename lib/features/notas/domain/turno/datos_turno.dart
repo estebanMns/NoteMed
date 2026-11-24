@@ -8,6 +8,7 @@ import 'package:notemed/features/pacientes/domain/procedimiento_invasivo.dart';
 import 'package:notemed/features/valoracion/domain/braden/braden_escala.dart';
 import 'package:notemed/features/valoracion/domain/braden/braden_mapa.dart';
 import 'package:notemed/features/valoracion/domain/downton/downton_escala.dart';
+import 'package:notemed/features/valoracion/domain/prom/evaluacion_prom.dart';
 
 /// Todo lo que se registra del paciente durante el turno.
 class DatosTurno {
@@ -17,6 +18,7 @@ class DatosTurno {
     this.infusiones = const [],
     this.downton,
     this.braden,
+    this.prom,
     this.procedimientos = const [],
     this.observaciones = '',
   });
@@ -26,6 +28,7 @@ class DatosTurno {
   final List<Infusion> infusiones;
   final EvaluacionDownton? downton;
   final EvaluacionBraden? braden;
+  final EvaluacionProm? prom;
   final List<ProcedimientoInvasivo> procedimientos;
   final String observaciones;
 
@@ -35,6 +38,7 @@ class DatosTurno {
     'infusiones': [for (final i in infusiones) i.toMap()],
     'downton': downton?.toMap(),
     'braden': braden == null ? null : bradenAMapa(braden!),
+    'prom': prom?.toMap(),
     'procedimientos': [for (final p in procedimientos) p.toMap()],
     'observaciones': observaciones,
   };
@@ -50,6 +54,7 @@ class DatosTurno {
         ? null
         : EvaluacionDownton.fromMap(_mapa(m['downton'])),
     braden: m['braden'] == null ? null : bradenDeMapa(_mapa(m['braden'])),
+    prom: m['prom'] == null ? null : EvaluacionProm.fromMap(_mapa(m['prom'])),
     procedimientos: [
       for (final p in m['procedimientos'] as List? ?? const [])
         ProcedimientoInvasivo.fromMap(_mapa(p)),
@@ -77,6 +82,7 @@ String construirSolicitudTurno(DatosTurno d) {
     braden?.total == null
         ? 'Escala de Braden: No registrada'
         : 'Escala de Braden: ${braden!.total} puntos (${braden.nivel!.etiqueta})',
+    d.prom?.toTexto() ?? '${EvaluacionProm.titulo}: No registrados',
     'Procedimientos invasivos: ${_lista(d.procedimientos.map((p) => p.toTexto()))}',
     'Observaciones de enfermería: ${obs.isEmpty ? 'Ninguna' : obs}',
   ].join('\n');

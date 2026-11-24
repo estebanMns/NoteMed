@@ -20,6 +20,7 @@ import 'package:notemed/features/pacientes/domain/signos_vitales.dart';
 import 'package:notemed/features/pacientes/domain/procedimiento_invasivo.dart';
 import 'package:notemed/features/valoracion/domain/braden/braden_escala.dart';
 import 'package:notemed/features/valoracion/domain/downton/downton_escala.dart';
+import 'package:notemed/features/valoracion/domain/prom/evaluacion_prom.dart';
 
 /// IA que guarda lo que recibe y responde con [responder].
 class IASimulada implements ServicioIA {
@@ -83,6 +84,7 @@ class RepositorioMemoria implements RepositorioPacientes {
   final Map<int, List<ProcedimientoInvasivo>> _procedimientos = {};
   final Map<int, EvaluacionDownton> _downton = {};
   final Map<int, EvaluacionBraden> _braden = {};
+  final Map<int, EvaluacionProm> _prom = {};
   final Map<int, NotaClinica> _notas = {};
   final Map<int, SolicitudPendiente> _cola = {};
   int _sec = 0;
@@ -160,6 +162,13 @@ class RepositorioMemoria implements RepositorioPacientes {
 
   @override
   Future<EvaluacionBraden?> braden(int pacienteId) async => _braden[pacienteId];
+
+  @override
+  Future<void> guardarProm(int pacienteId, EvaluacionProm e) async =>
+      _prom[pacienteId] = e;
+
+  @override
+  Future<EvaluacionProm?> prom(int pacienteId) async => _prom[pacienteId];
 
   @override
   Future<NotaClinica> guardarNota(NotaClinica n) async {

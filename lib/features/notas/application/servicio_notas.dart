@@ -81,6 +81,7 @@ class ServicioNotas {
       infusiones: await repositorio.infusiones(id),
       downton: await repositorio.downton(id),
       braden: await repositorio.braden(id),
+      prom: await repositorio.prom(id),
       procedimientos: await repositorio.procedimientos(id),
       observaciones: observaciones,
     );

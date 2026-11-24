@@ -23,6 +23,8 @@ import 'package:notemed/features/valoracion/domain/braden/braden_escala.dart';
 import 'package:notemed/features/valoracion/presentation/braden_screen.dart';
 import 'package:notemed/features/valoracion/domain/downton/downton_escala.dart';
 import 'package:notemed/features/valoracion/presentation/downton_screen.dart';
+import 'package:notemed/features/valoracion/presentation/prom_screen.dart';
+import 'package:notemed/features/valoracion/domain/prom/evaluacion_prom.dart';
 import 'package:notemed/features/pacientes/domain/infusion.dart';
 import 'package:notemed/features/pacientes/presentation/infusiones_form.dart';
 import 'package:notemed/features/pacientes/domain/paciente.dart';
@@ -46,6 +48,7 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
   List<NotaClinica> _notas = const [];
   EvaluacionDownton? _downton;
   EvaluacionBraden? _braden;
+  EvaluacionProm? _prom;
   bool _cargando = true;
   bool _generando = false;
   List<String> _erroresSignos = const [];
@@ -83,6 +86,7 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
     final notas = await _repo.notas(_id);
     final downton = await _repo.downton(_id);
     final braden = await _repo.braden(_id);
+    final prom = await _repo.prom(_id);
     if (!mounted) return;
     setState(() {
       _infusiones = infusiones;
@@ -90,6 +94,7 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
       _notas = notas;
       _downton = downton;
       _braden = braden;
+      _prom = prom;
       _cargando = false;
     });
     String t(num? v) => v == null ? '' : '$v';
@@ -512,6 +517,26 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
                           final navegador = Navigator.of(context);
                           await _repo.guardarBraden(_id, e);
                           setState(() => _braden = e);
+                          navegador.pop();
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                Card(
+                  child: ListTile(
+                    key: const Key('pac-prom'),
+                    leading: const Icon(Icons.record_voice_over_outlined),
+                    title: const Text('Reportado por el paciente (PROM)'),
+                    subtitle: Text(_prom?.resumen ?? 'Sin evaluar'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _abrir<void>(
+                      PromScreen(
+                        inicial: _prom ?? const EvaluacionProm(),
+                        onGuardar: (e) async {
+                          final navegador = Navigator.of(context);
+                          await _repo.guardarProm(_id, e);
+                          setState(() => _prom = e);
                           navegador.pop();
                         },
                       ),

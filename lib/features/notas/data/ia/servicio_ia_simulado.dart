@@ -80,6 +80,8 @@ class ServicioIASimulado implements ServicioIA {
     ].join(' ');
   }
 
+  static const _prom = 'Resultados reportados por el paciente';
+
   static String _datosClinicos(Map<String, String> c) => [
     'Signos vitales: ${_valor(c, 'Signos vitales')}.',
     'Infusiones: ${_valor(c, 'Infusiones')}.',
@@ -97,7 +99,7 @@ class ServicioIASimulado implements ServicioIA {
           ? 'Escala de Braden: ${c['Escala de Braden']}'
           : 'Escala de Braden: No registrada',
     ),
-    if (c.containsKey('PROM')) _punto('Valoración PROM: ${c['PROM']}'),
+    if (c.containsKey(_prom)) _punto('$_prom: ${c[_prom]}'),
   ].join(' ');
 
   static String _observaciones(Map<String, String> c) {

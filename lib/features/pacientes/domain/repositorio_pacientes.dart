@@ -9,6 +9,7 @@ import 'package:notemed/features/pacientes/domain/signos_vitales.dart';
 import 'package:notemed/features/pacientes/domain/procedimiento_invasivo.dart';
 import 'package:notemed/features/valoracion/domain/braden/braden_escala.dart';
 import 'package:notemed/features/valoracion/domain/downton/downton_escala.dart';
+import 'package:notemed/features/valoracion/domain/prom/evaluacion_prom.dart';
 import 'package:notemed/features/sincronizacion/domain/solicitud_pendiente.dart';
 
 /// Ya existe un paciente con la misma cédula.
@@ -47,6 +48,8 @@ abstract interface class RepositorioPacientes {
   Future<EvaluacionDownton?> downton(int pacienteId);
   Future<void> guardarBraden(int pacienteId, EvaluacionBraden e);
   Future<EvaluacionBraden?> braden(int pacienteId);
+  Future<void> guardarProm(int pacienteId, EvaluacionProm e);
+  Future<EvaluacionProm?> prom(int pacienteId);
 
   /// Crea la nota si no tiene id, o la actualiza (por ejemplo al firmar).
   Future<NotaClinica> guardarNota(NotaClinica n);

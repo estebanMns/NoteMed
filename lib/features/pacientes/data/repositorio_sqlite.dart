@@ -13,6 +13,7 @@ import 'package:notemed/features/pacientes/domain/procedimiento_invasivo.dart';
 import 'package:notemed/features/valoracion/domain/braden/braden_escala.dart';
 import 'package:notemed/features/valoracion/domain/braden/braden_mapa.dart';
 import 'package:notemed/features/valoracion/domain/downton/downton_escala.dart';
+import 'package:notemed/features/valoracion/domain/prom/evaluacion_prom.dart';
 import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
 import 'package:notemed/features/sincronizacion/domain/solicitud_pendiente.dart';
 
@@ -169,6 +170,16 @@ class RepositorioSqlite implements RepositorioPacientes {
   Future<EvaluacionBraden?> braden(int pacienteId) async {
     final m = await _evaluacion(pacienteId, 'braden');
     return m == null ? null : bradenDeMapa(m);
+  }
+
+  @override
+  Future<void> guardarProm(int pacienteId, EvaluacionProm e) =>
+      _guardarEvaluacion(pacienteId, 'prom', e.toMap());
+
+  @override
+  Future<EvaluacionProm?> prom(int pacienteId) async {
+    final m = await _evaluacion(pacienteId, 'prom');
+    return m == null ? null : EvaluacionProm.fromMap(m);
   }
 
   @override

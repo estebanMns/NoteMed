@@ -51,6 +51,23 @@ Se elige al compilar; el menú principal muestra cuál está activa.
 | Servidor del hospital | `flutter run --dart-define=NOTEMED_API_URL=https://servidor/api` | Uso real. La clave del modelo de lenguaje vive en el backend. Contrato en [docs/contrato_api.md](docs/contrato_api.md). |
 | Claude directo | `flutter run --dart-define=ANTHROPIC_API_KEY=...` | **Solo demostraciones.** La clave queda dentro de la app y se puede extraer. |
 
+## Backend y componente de IA
+
+El servidor está en [`backend/`](backend/README.md) (FastAPI, PostgreSQL,
+Alembic). Implementa la sección 1 de [docs/contrato_api.md](docs/contrato_api.md)
+(`POST /v1/ia/borradores`) y la base de notas, firma y auditoría.
+
+```bash
+cd backend
+python3.13 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
+NOTEMED_DATABASE_URL=sqlite:///./notemed.db ./.venv/bin/alembic upgrade head
+NOTEMED_DATABASE_URL=sqlite:///./notemed.db NOTEMED_ENTORNO=desarrollo \
+  ./.venv/bin/uvicorn app.main:create_app --factory --port 8000
+```
+
+Las secciones 2 (inicio de sesión) y 3 (envío FHIR) del contrato están
+pendientes de acuerdo entre ambos equipos.
+
 ## Pruebas
 
 ```bash

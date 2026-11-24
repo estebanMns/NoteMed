@@ -1,0 +1,26 @@
+# Entorno local: PostgreSQL + API. Solo para desarrollo con datos sintéticos.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: notemed
+      POSTGRES_USER: notemed
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env}
+    volumes:
+      - notemed-db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      NOTEMED_ENTORNO: desarrollo
+      NOTEMED_DATABASE_URL: postgresql+psycopg://notemed:${POSTGRES_PASSWORD}@db:5432/notemed
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+volumes:
+  notemed-db:

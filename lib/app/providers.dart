@@ -4,7 +4,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common/sqlite_api.dart';
 
 import 'package:notemed/core/red/estado_red.dart';
 import 'package:notemed/core/red/estado_red_dispositivo.dart';

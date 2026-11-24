@@ -3,7 +3,7 @@
 library;
 
 import 'dart:convert';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common/sqlite_api.dart';
 import 'package:notemed/features/notas/domain/firma_enfermera.dart';
 import 'package:notemed/features/notas/domain/nota_clinica.dart';
 import 'package:notemed/features/pacientes/domain/infusion.dart';

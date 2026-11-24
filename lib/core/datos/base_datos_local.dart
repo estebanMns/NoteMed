@@ -1,34 +1,57 @@
 /// TSK-25 · HU07: base de datos interna del celular (SQLite) para trabajar
-/// sin internet. Los datos del paciente nunca salen del dispositivo sin
-/// anonimizar (HU08).
+/// sin internet. En el celular el archivo está cifrado con SQLCipher y la
+/// clave vive en el almacenamiento seguro del sistema (Ley 1581 de 2012).
+/// Los datos del paciente nunca salen del dispositivo sin anonimizar (HU08).
 library;
 
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart' as cipher;
+
+import 'package:notemed/core/datos/clave_base_datos.dart';
 
 class BaseDatosLocal {
   BaseDatosLocal._();
 
   static const int version = 1;
-  static const String nombreArchivo = 'notemed.db';
+  static const String nombreArchivo = 'notemed_cifrada.db';
 
-  /// Abre (o crea) la base. En las pruebas se pasa [factory] de
-  /// `sqflite_common_ffi` y una [ruta] temporal.
-  static Future<Database> abrir({
-    DatabaseFactory? factory,
-    String? ruta,
-  }) async {
-    final f = factory ?? databaseFactory;
-    final destino = ruta ?? p.join(await f.getDatabasesPath(), nombreArchivo);
+  /// Archivo sin cifrar de versiones anteriores. Solo tuvo datos sintéticos.
+  static const String nombreArchivoAnterior = 'notemed.db';
+
+  /// Abre (o crea) la base cifrada del celular.
+  static Future<Database> abrirCifrada({ClaveBaseDatos? clave}) async {
+    final f = cipher.databaseFactory;
+    final dir = await f.getDatabasesPath();
+    // No se deja en el celular una copia sin cifrar.
+    await f.deleteDatabase(p.join(dir, nombreArchivoAnterior));
+    final password = await (clave ?? ClaveBaseDatos()).obtener();
     return f.openDatabase(
-      destino,
-      options: OpenDatabaseOptions(
+      p.join(dir, nombreArchivo),
+      options: cipher.SqlCipherOpenDatabaseOptions(
         version: version,
-        onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
+        password: password,
+        onConfigure: _configurar,
         onCreate: (db, _) => _crear(db),
       ),
     );
   }
+
+  /// Abre una base sin cifrar. Solo para pruebas con `sqflite_common_ffi`.
+  static Future<Database> abrir({
+    required DatabaseFactory factory,
+    required String ruta,
+  }) => factory.openDatabase(
+    ruta,
+    options: OpenDatabaseOptions(
+      version: version,
+      onConfigure: _configurar,
+      onCreate: (db, _) => _crear(db),
+    ),
+  );
+
+  static Future<void> _configurar(Database db) =>
+      db.execute('PRAGMA foreign_keys = ON');
 
   static Future<void> _crear(Database db) async {
     const fk = 'REFERENCES pacientes(id) ON DELETE CASCADE';

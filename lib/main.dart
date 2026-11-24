@@ -7,7 +7,7 @@ import 'package:notemed/core/datos/base_datos_local.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final db = await BaseDatosLocal.abrir();
+  final db = await BaseDatosLocal.abrirCifrada();
   runApp(
     ProviderScope(
       overrides: [baseDatosProvider.overrideWithValue(db)],

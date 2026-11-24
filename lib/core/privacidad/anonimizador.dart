@@ -30,7 +30,9 @@ class Anonimizador {
 
   static final RegExp _cama = RegExp(
     '$_noLetraAntes'
-    r'(?:cama|habitaci[oó]n|hab\.)\s*(?:n(?:o\.?|[°º]|\.)\s*)?[A-Za-z]?-?\d+[A-Za-z]?'
+    // `\s+` (no `\s*`): así el código ya anonimizado "CAMA-001" no vuelve a
+    // contarse como dato de cama en contieneDatosPersonales.
+    r'(?:cama|habitaci[oó]n|hab\.)\s+(?:n(?:o\.?|[°º]|\.)\s*)?[A-Za-z]?-?\d+[A-Za-z]?'
     '$_noLetraDespues',
     caseSensitive: false,
     unicode: true,

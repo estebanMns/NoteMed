@@ -56,6 +56,41 @@ class IaRespuesta(BaseModel):
     texto: str
 
 
+class LoginEntrada(_Entrada):
+    usuario: Annotated[str, StringConstraints(min_length=1, max_length=64)]
+    clave: Annotated[str, StringConstraints(min_length=1, max_length=256)]
+
+
+class UsuarioSesion(BaseModel):
+    usuario: str
+    tarjetaProfesional: str
+    rol: str
+
+
+class SesionSalida(BaseModel):
+    token: str
+    expira: datetime
+    usuario: UsuarioSesion
+
+
+class UsuarioAdminSalida(BaseModel):
+    usuario: str
+    tarjetaProfesional: str
+    rol: str
+    activo: bool
+
+
+class UsuarioNuevoEntrada(_Entrada):
+    usuario: Annotated[str, StringConstraints(min_length=3, max_length=64, pattern=r"^[a-z0-9._-]+$")]
+    clave: Annotated[str, StringConstraints(min_length=10, max_length=256)]
+    tarjetaProfesional: Annotated[str, StringConstraints(min_length=1, max_length=32)]
+
+
+class UsuarioEditarEntrada(_Entrada):
+    tarjetaProfesional: Annotated[str, StringConstraints(min_length=1, max_length=32)] | None = None
+    clave: Annotated[str, StringConstraints(min_length=10, max_length=256)] | None = None
+
+
 class FirmaEntrada(_Entrada):
     version: int = Field(ge=1)
 

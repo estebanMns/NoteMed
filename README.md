@@ -38,8 +38,8 @@ flutter pub get
 flutter run
 ```
 
-Usuarios de prueba (sintéticos): `enfermera1`, `enfermera2` o `jefe1`, clave
-`notemed123`.
+Usuarios de prueba sin servidor (sintéticos): `enfermera1`, `enfermera2` o `jefe1`,
+clave `notemed123`. Con el servidor, los usuarios los da de alta la jefa o el jefe.
 
 ### Qué IA usa la app
 
@@ -110,6 +110,72 @@ lib/
 - `main`: versión estable. Se integra por Pull Request.
 - `dev-evelin`: aplicación móvil. `dev-esteban`: backend y componente de IA.
 - La app y el backend se comunican según [docs/contrato_api.md](docs/contrato_api.md).
+
+## Pendientes para la app móvil (Evelin)
+
+El backend ya tiene inicio de sesión con JWT, cierre de sesión por inactividad
+y administración del personal por parte de la jefa o el jefe. Para que la app
+los use, falta lo siguiente. Los contratos exactos están en
+[docs/contrato_api.md](docs/contrato_api.md) y en `backend/README.md`.
+
+### 1. Inicio de sesión real
+
+- Implementar un `ServicioAutenticacion` remoto que llame a
+  `POST /v1/auth/sesiones` con `{"usuario", "clave"}` y guarde `token`, `expira`
+  y `usuario` (incluido `rol`: `enfermera` o `jefe`).
+- Cambiar `autenticacionProvider` para usar ese servicio. Los usuarios
+  `enfermera1`, `enfermera2` y `jefe1` quedan solo para desarrollo sin servidor.
+- Guardar el token en almacenamiento seguro (por ejemplo `flutter_secure_storage`),
+  no en memoria ni en la base local sin cifrar.
+
+### 2. Enviar el token en cada petición
+
+- `ServicioIARemoto` debe enviar `Authorization: Bearer <token>` en
+  `POST /v1/ia/borradores`. Hoy no lo envía y el servidor responde `401`
+  (el token es obligatorio por defecto).
+
+### 3. Manejar el cierre de sesión por inactividad
+
+El servidor cierra la sesión si pasan **2 minutos sin actividad**. Cualquier
+`401` con estos códigos debe llevar a la pantalla de inicio de sesión y borrar
+el token guardado:
+
+| `codigo` | Qué pasó |
+|---|---|
+| `sesion_inactiva` | Se cerró por 2 minutos sin actividad |
+| `sesion_cerrada` | La sesión se cerró manualmente o el usuario fue dado de baja |
+| `sesion_vencida` | Se alcanzó el tope de horas de la sesión |
+| `sesion_invalida` / `no_autenticado` | Token ausente, mal firmado o sin identidad |
+
+- Además, la app debe tener su propio temporizador de 2 minutos: al cumplirse,
+  bloquear la pantalla y pedir la clave sin esperar a la siguiente petición.
+  Cualquier toque o desplazamiento reinicia el temporizador.
+- Al cerrar sesión, llamar a `POST /v1/auth/cierre` (responde `204`) antes de
+  borrar el token.
+- Al iniciar sesión con clave incorrecta, el servidor responde `401` con
+  `codigo: "credenciales_invalidas"`. Mostrar el mensaje sin indicar si falló
+  el usuario o la clave.
+
+### 4. Pantalla de administración del personal (solo jefe)
+
+| Acción | Llamada | Respuesta esperada |
+|---|---|---|
+| Listar | `GET /v1/usuarios` (`?incluir_inactivos=true` para ver bajas) | `200` lista de `{usuario, tarjetaProfesional, rol, activo}` |
+| Agregar | `POST /v1/usuarios` con `{usuario, clave, tarjetaProfesional}` | `201`; `409 usuario_existente` si ya existe |
+| Editar | `PUT /v1/usuarios/{usuario}` con `tarjetaProfesional` y/o `clave` | `200`; cambiar la clave cierra sus sesiones |
+| Dar de baja | `DELETE /v1/usuarios/{usuario}` | `204`; la cuenta queda inactiva |
+
+- Usuario: 3 a 64 caracteres, solo minúsculas, números, `.`, `_` o `-`.
+- Clave: mínimo 10 caracteres.
+- Validación fallida: `422` con `codigo: "datos_invalidos"` y `detalle` por campo.
+- Una enfermera que llame a estas rutas recibe `403`. La pantalla solo debe
+  mostrarse al rol `jefe`, y el servidor igual lo verifica.
+- El jefe no puede darse de baja a sí mismo (`403`).
+
+### 5. Sin cambios de contrato pendientes en la app
+
+- La IA y los errores siguen el formato `{"error": "mensaje", "codigo": "..."}`.
+- La sección 3 del contrato (envío FHIR) sigue pendiente de acordar.
 
 ## Pendiente
 

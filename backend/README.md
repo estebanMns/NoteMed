@@ -12,7 +12,7 @@ revisión y firma. Corresponde a la parte de backend e IA del PDF (§3.4).
 | Lenguaje | Python 3.13, FastAPI, Pydantic v2 | Validación estricta de contratos y documentación OpenAPI |
 | Persistencia | SQLAlchemy 2 · PostgreSQL 16 (producción) · SQLite (pruebas) | Integridad referencial y ACID (Res. 1995/1999) |
 | Esquema | Alembic | Cambios de BD versionados; producción nunca usa `create_all` |
-| Identidad | JWT con rol (`enfermero`, `supervisor`), identificado por código de usuario | No se guardan nombres del personal |
+| Identidad | Usuario y clave (scrypt) → JWT con rol (`enfermera` o `jefe`). Sin registro público: lo da de alta una persona administradora | La clave nunca se guarda en claro; el token no lleva nombres |
 | IA | Puerto `ModeloLenguaje` + adaptadores (`simulado`, `http` compatible con chat completions) | Cambiar de proveedor no toca la lógica clínica |
 | Privacidad | Seudonimización antes del modelo + barrera que aborta si queda un dato identificable | Ley 1581; defensa en profundidad |
 | Verificación | Cadena de verificación determinista: cifras y códigos deben existir en la entrada; filtro de siglas | Detecta alucinaciones (PDF §2.2.5) |
@@ -49,18 +49,45 @@ backend/
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
-| POST | `/v1/pacientes` | enfermero | Registra un paciente por seudónimo (`PAC-###`) |
-| GET | `/v1/pacientes/{id}/notas` | autor / supervisor | Notas del paciente |
-| POST | `/v1/notas/borradores` | enfermero | Genera el borrador con IA (201; 200 si ya existía) |
-| GET | `/v1/notas/{id}` | autor / supervisor | Detalle, texto y hallazgos |
+| POST | `/v1/auth/sesiones` | público | Usuario y clave → JWT (contrato sección 2) |
+| POST | `/v1/auth/cierre` | cualquiera autenticado | Cierra la sesión actual |
+| GET | `/v1/usuarios` | jefe | Lista el personal (`?incluir_inactivos=true` para ver las bajas) |
+| POST | `/v1/usuarios` | jefe | Da de alta una enfermera |
+| PUT | `/v1/usuarios/{usuario}` | jefe | Edita tarjeta o clave (cambiar la clave cierra sus sesiones) |
+| DELETE | `/v1/usuarios/{usuario}` | jefe | Da de baja (baja lógica; cierra sus sesiones) |
+| POST | `/v1/pacientes` | enfermera | Registra un paciente por seudónimo (`PAC-###`) |
+| GET | `/v1/pacientes/{id}/notas` | autor / jefe | Notas del paciente |
+| POST | `/v1/notas/borradores` | enfermera | Genera el borrador con IA (201; 200 si ya existía) |
+| GET | `/v1/notas/{id}` | autor / jefe | Detalle, texto y hallazgos |
 | PUT | `/v1/notas/{id}/revision` | autor | Guarda la revisión (requiere `version`) |
 | POST | `/v1/notas/{id}/firma` | autor | Firma (requiere `version`) |
-| GET | `/v1/notas/{id}/fhir` | autor / supervisor | Documento FHIR |
-| GET | `/v1/metricas/borradores` | supervisor | Aceptación y tasa de edición |
+| GET | `/v1/notas/{id}/fhir` | autor / jefe | Documento FHIR |
+| GET | `/v1/metricas/borradores` | jefe | Aceptación y tasa de edición |
 | GET | `/health` | público | Estado del servicio |
 
 Errores con cuerpo `{"error": "...", "mensaje": "...", "motivos": [...]}`:
 401 sin token válido · 403 sin permiso · 404 · 409 conflicto de versión o estado · 422 nota no firmable o datos no seguros · 503 la IA no respondió.
+
+## Sesiones
+
+- Cada inicio de sesión abre una sesión guardada en la base de datos. El JWT lleva su identificador (`jti`).
+- **Inactividad:** si pasan **2 minutos** sin peticiones con esa sesión, se cierra y la siguiente petición responde 401 con `codigo: "sesion_inactiva"`. Cada petición válida renueva el plazo. Configurable con `NOTEMED_SESION_INACTIVIDAD_MINUTOS`.
+- Otros códigos de 401: `sesion_cerrada` (cierre manual o baja), `sesion_vencida` (tope de `NOTEMED_JWT_HORAS_EXPIRACION`).
+- La app debe volver a la pantalla de inicio de sesión al recibir cualquiera de estos 401.
+
+## Personal y roles
+
+- **`enfermera`:** registra pacientes, genera borradores, revisa y firma sus propias notas.
+- **`jefe`:** administra las cuentas de enfermería (alta, edición y baja) y consulta las métricas de validación. No firma notas ajenas ni administra otras cuentas de jefe.
+
+Los usuarios los da de alta una persona administradora (no hay registro público):
+
+```bash
+NOTEMED_DATABASE_URL=sqlite:///./notemed.db ./.venv/bin/python -m scripts.crear_usuario \
+  --usuario enfermera1 --tarjeta TP-10001 --rol enfermera
+```
+
+La clave se pide por consola (mínimo 10 caracteres).
 
 ## Puesta en marcha (desarrollo)
 
@@ -70,7 +97,7 @@ python3.13 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 cp .env.example .env              # ajuste valores; no suba .env
 ./.venv/bin/alembic upgrade head  # crea el esquema
 ./.venv/bin/uvicorn app.main:create_app --factory --reload
-./.venv/bin/python -m scripts.crear_token --sub ENF-01 --rol enfermero
+./.venv/bin/python -m scripts.crear_token --sub enfermera1 --rol enfermera
 ```
 
 Con Docker: `docker compose up --build` (define `POSTGRES_PASSWORD` en `.env`).

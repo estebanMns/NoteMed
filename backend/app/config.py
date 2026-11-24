@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     jwt_secret: SecretStr = Field(default=SecretStr("cambiar-en-produccion-minimo-32-caracteres"))
     jwt_horas_expiracion: int = 8
+    # Cierre por inactividad: si nadie usa la sesión durante este tiempo, se revoca.
+    sesion_inactividad_minutos: float = 2.0
 
     llm_proveedor: Literal["simulado", "http"] = "simulado"
     llm_base_url: str = ""

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app.domain.nota import EstadoNota, TipoNota
@@ -79,3 +79,30 @@ class EventoAuditoriaORM(Base):
 
     # La relación ORM hace que el unit of work inserte primero la nota.
     nota: Mapped[NotaORM] = relationship()
+
+
+class UsuarioORM(Base):
+    """Personal que inicia sesión. Solo se guarda la clave derivada (scrypt)."""
+
+    __tablename__ = "usuarios"
+    __table_args__ = (CheckConstraint("rol IN ('enfermera', 'jefe')", name="ck_usuarios_rol"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    usuario: Mapped[str] = mapped_column(String(64), unique=True)
+    clave_hash: Mapped[str] = mapped_column(String(255))
+    tarjeta_profesional: Mapped[str] = mapped_column(String(32))
+    rol: Mapped[str] = mapped_column(String(12))
+    activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+
+
+class SesionORM(Base):
+    """Sesión iniciada. Controla la expiración por inactividad y el cierre."""
+
+    __tablename__ = "sesiones"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # = claim jti
+    usuario_id: Mapped[str] = mapped_column(ForeignKey("usuarios.id", ondelete="RESTRICT"), index=True)
+    creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ultima_actividad: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expira: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revocada: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")

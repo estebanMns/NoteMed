@@ -133,11 +133,11 @@ def test_otra_enfermera_no_ve_ni_firma_la_nota(cliente, enfermera, otra_enfermer
     assert r.status_code == 403
 
 
-def test_supervisor_lee_pero_no_firma(cliente, enfermera, supervisor):
+def test_jefe_lee_pero_no_firma(cliente, enfermera, jefe):
     paciente_id = _crear_paciente(cliente, enfermera)
     nota = _borrador(cliente, enfermera, paciente_id).json()
-    assert cliente.get(f"/v1/notas/{nota['id']}", headers=supervisor).status_code == 200
-    r = cliente.post(f"/v1/notas/{nota['id']}/firma", json={"version": 1}, headers=supervisor)
+    assert cliente.get(f"/v1/notas/{nota['id']}", headers=jefe).status_code == 200
+    r = cliente.post(f"/v1/notas/{nota['id']}/firma", json={"version": 1}, headers=jefe)
     assert r.status_code == 403
 
 
@@ -146,7 +146,7 @@ def test_sin_token_o_token_falso_da_401(cliente):
     assert cliente.get("/v1/notas/x", headers={"Authorization": "Bearer falso"}).status_code == 401
 
 
-def test_metricas_solo_para_supervisor(cliente, enfermera, supervisor):
+def test_metricas_solo_para_jefe(cliente, enfermera, jefe):
     paciente_id = _crear_paciente(cliente, enfermera)
     nota = _borrador(cliente, enfermera, paciente_id).json()
     cliente.put(
@@ -157,7 +157,7 @@ def test_metricas_solo_para_supervisor(cliente, enfermera, supervisor):
     cliente.post(f"/v1/notas/{nota['id']}/firma", json={"version": 2}, headers=enfermera)
 
     assert cliente.get("/v1/metricas/borradores", headers=enfermera).status_code == 403
-    r = cliente.get("/v1/metricas/borradores", headers=supervisor)
+    r = cliente.get("/v1/metricas/borradores", headers=jefe)
     assert r.status_code == 200
     datos = r.json()
     assert datos["notas_totales"] == 1

@@ -46,3 +46,23 @@ class PacienteExistente(ErrorDominio):
 
 class NoAutenticado(ErrorDominio):
     """Token ausente, inválido o vencido."""
+
+
+class CredencialesInvalidas(ErrorDominio):
+    """Usuario o clave incorrectos. El mensaje no revela cuál de los dos falló."""
+
+
+class UsuarioExistente(ErrorDominio):
+    pass
+
+
+class SesionInvalida(ErrorDominio):
+    """La sesión venció por inactividad, fue cerrada o el usuario fue dado de baja."""
+
+    def __init__(self, mensaje: str, codigo: str = "sesion_invalida") -> None:
+        super().__init__(mensaje)
+        self.codigo = codigo
+
+
+class UsuarioNoEncontrado(ErrorDominio):
+    pass

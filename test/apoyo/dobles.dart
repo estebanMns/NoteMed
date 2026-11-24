@@ -1,23 +1,37 @@
 // Dobles de prueba: IA simulada, red simulada y repositorio en memoria.
 import 'dart:async';
 
-import 'package:notemed/core/datos/estado_red.dart';
-import 'package:notemed/core/datos/repositorio_pacientes.dart';
-import 'package:notemed/core/datos/solicitud_pendiente.dart';
-import 'package:notemed/core/ia/servicio_ia.dart';
-import 'package:notemed/features/nota/nota_clinica.dart';
-import 'package:notemed/features/paciente/infusion.dart';
-import 'package:notemed/features/paciente/paciente.dart';
-import 'package:notemed/features/paciente/signos_vitales.dart';
-import 'package:notemed/features/procedimientos/procedimiento_invasivo.dart';
-import 'package:notemed/features/riesgos/braden/braden_escala.dart';
-import 'package:notemed/features/riesgos/downton/downton_escala.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:notemed/app/app.dart';
+import 'package:notemed/app/providers.dart';
+import 'package:notemed/features/auth/domain/usuario.dart';
+import 'package:notemed/features/auth/presentation/sesion.dart';
+import 'package:notemed/features/notas/application/servicio_notas.dart';
+import 'package:notemed/features/metricas/domain/metrica_nota.dart';
+import 'package:notemed/features/metricas/domain/repositorio_metricas.dart';
+
+import 'package:notemed/core/red/estado_red.dart';
+import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
+import 'package:notemed/features/sincronizacion/domain/solicitud_pendiente.dart';
+import 'package:notemed/features/notas/domain/servicio_ia.dart';
+import 'package:notemed/features/notas/domain/nota_clinica.dart';
+import 'package:notemed/features/pacientes/domain/infusion.dart';
+import 'package:notemed/features/pacientes/domain/paciente.dart';
+import 'package:notemed/features/pacientes/domain/signos_vitales.dart';
+import 'package:notemed/features/pacientes/domain/procedimiento_invasivo.dart';
+import 'package:notemed/features/valoracion/domain/braden/braden_escala.dart';
+import 'package:notemed/features/valoracion/domain/downton/downton_escala.dart';
+import 'package:notemed/features/valoracion/domain/prom/evaluacion_prom.dart';
 
 /// IA que guarda lo que recibe y responde con [responder].
 class IASimulada implements ServicioIA {
   IASimulada([this.responder]);
 
   String Function(String sistema, String usuario)? responder;
+
+  @override
+  bool funcionaSinRed = false;
   Object? error;
   final List<({String sistema, String usuario})> recibidas = [];
 
@@ -56,6 +70,12 @@ class RedSimulada implements EstadoRed {
   Future<void> cerrar() => _cambios.close();
 }
 
+const enfermeraPrueba = Usuario(
+  usuario: 'enfermera1',
+  tarjetaProfesional: 'TP-10001',
+  rol: Rol.enfermera,
+);
+
 const pacienteEjemplo = Paciente(
   nombre: 'María Fernanda Gómez',
   cedula: '1085123456',
@@ -72,6 +92,7 @@ class RepositorioMemoria implements RepositorioPacientes {
   final Map<int, List<ProcedimientoInvasivo>> _procedimientos = {};
   final Map<int, EvaluacionDownton> _downton = {};
   final Map<int, EvaluacionBraden> _braden = {};
+  final Map<int, EvaluacionProm> _prom = {};
   final Map<int, NotaClinica> _notas = {};
   final Map<int, SolicitudPendiente> _cola = {};
   int _sec = 0;
@@ -151,7 +172,17 @@ class RepositorioMemoria implements RepositorioPacientes {
   Future<EvaluacionBraden?> braden(int pacienteId) async => _braden[pacienteId];
 
   @override
+  Future<void> guardarProm(int pacienteId, EvaluacionProm e) async =>
+      _prom[pacienteId] = e;
+
+  @override
+  Future<EvaluacionProm?> prom(int pacienteId) async => _prom[pacienteId];
+
+  @override
   Future<NotaClinica> guardarNota(NotaClinica n) async {
+    if (n.id != null && _notas[n.id]?.firma != null) {
+      throw NotaFirmadaInmutable(n.id);
+    }
     final g = n.id == null ? n.conId(++_sec) : n;
     _notas[g.id!] = g;
     return g;
@@ -189,4 +220,52 @@ class RepositorioMemoria implements RepositorioPacientes {
       ultimoError: error,
     );
   }
+}
+
+/// Monta [hijo] (o la app completa) con dependencias de prueba.
+Widget conDependencias({
+  required RepositorioPacientes repo,
+  ServicioIA? ia,
+  EstadoRed? red,
+  ServicioNotas? servicio,
+  RepositorioMetricas? metricas,
+  Usuario? sesion = enfermeraPrueba,
+  Widget? hijo,
+}) {
+  final metricasUsadas = metricas ?? MetricasMemoria();
+  final iaUsada = ia ?? IASimulada();
+  final redUsada = red ?? RedSimulada();
+  return ProviderScope(
+    overrides: [
+      sesionProvider.overrideWith(() => SesionNotifier(sesion)),
+      repositorioProvider.overrideWithValue(repo),
+      repositorioMetricasProvider.overrideWithValue(metricasUsadas),
+      servicioIAProvider.overrideWithValue(iaUsada),
+      estadoRedProvider.overrideWithValue(redUsada),
+      servicioNotasProvider.overrideWithValue(
+        servicio ??
+            ServicioNotas(
+              repositorio: repo,
+              ia: iaUsada,
+              red: redUsada,
+              metricas: metricasUsadas,
+            ),
+      ),
+    ],
+    child: hijo == null ? const NoteMedApp() : MaterialApp(home: hijo),
+  );
+}
+
+/// Métricas en memoria.
+class MetricasMemoria implements RepositorioMetricas {
+  final List<MetricaNota> lista = [];
+
+  @override
+  Future<MetricaNota> registrar(MetricaNota m) async {
+    lista.add(m);
+    return m;
+  }
+
+  @override
+  Future<List<MetricaNota>> metricas() async => List.of(lista);
 }

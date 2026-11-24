@@ -1,17 +1,17 @@
 // Dobles de prueba: IA simulada, red simulada y repositorio en memoria.
 import 'dart:async';
 
-import 'package:notemed/core/datos/estado_red.dart';
-import 'package:notemed/core/datos/repositorio_pacientes.dart';
-import 'package:notemed/core/datos/solicitud_pendiente.dart';
-import 'package:notemed/core/ia/servicio_ia.dart';
-import 'package:notemed/features/nota/nota_clinica.dart';
-import 'package:notemed/features/paciente/infusion.dart';
-import 'package:notemed/features/paciente/paciente.dart';
-import 'package:notemed/features/paciente/signos_vitales.dart';
-import 'package:notemed/features/procedimientos/procedimiento_invasivo.dart';
-import 'package:notemed/features/riesgos/braden/braden_escala.dart';
-import 'package:notemed/features/riesgos/downton/downton_escala.dart';
+import 'package:notemed/core/red/estado_red.dart';
+import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
+import 'package:notemed/features/sincronizacion/domain/solicitud_pendiente.dart';
+import 'package:notemed/features/notas/domain/servicio_ia.dart';
+import 'package:notemed/features/notas/domain/nota_clinica.dart';
+import 'package:notemed/features/pacientes/domain/infusion.dart';
+import 'package:notemed/features/pacientes/domain/paciente.dart';
+import 'package:notemed/features/pacientes/domain/signos_vitales.dart';
+import 'package:notemed/features/pacientes/domain/procedimiento_invasivo.dart';
+import 'package:notemed/features/valoracion/domain/braden/braden_escala.dart';
+import 'package:notemed/features/valoracion/domain/downton/downton_escala.dart';
 
 /// IA que guarda lo que recibe y responde con [responder].
 class IASimulada implements ServicioIA {

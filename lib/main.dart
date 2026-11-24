@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
-import 'core/datos/base_datos_local.dart';
-import 'core/datos/estado_red.dart';
-import 'core/datos/repositorio_pacientes.dart';
-import 'core/ia/claude_servicio_ia.dart';
-import 'core/ia/servicio_ia.dart';
-import 'features/nota/servicio_notas.dart';
-import 'features/paciente/pacientes_screen.dart';
-import 'features/riesgos/braden/braden_screen.dart';
-import 'features/riesgos/downton/downton_screen.dart';
-import 'features/turno/entrega_turno_screen.dart';
+import 'package:notemed/core/datos/base_datos_local.dart';
+import 'package:notemed/core/red/estado_red_dispositivo.dart';
+import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
+import 'package:notemed/features/notas/data/ia/claude_servicio_ia.dart';
+import 'package:notemed/features/notas/domain/servicio_ia.dart';
+import 'package:notemed/features/notas/application/servicio_notas.dart';
+import 'package:notemed/features/pacientes/presentation/pacientes_screen.dart';
+import 'package:notemed/features/valoracion/presentation/braden_screen.dart';
+import 'package:notemed/features/valoracion/presentation/downton_screen.dart';
+import 'package:notemed/features/notas/presentation/entrega_turno_screen.dart';
+import 'package:notemed/features/pacientes/data/repositorio_sqlite.dart';
 
 /// Clave de la API de Claude: `flutter run --dart-define=ANTHROPIC_API_KEY=...`
 const _claveIA = String.fromEnvironment('ANTHROPIC_API_KEY');

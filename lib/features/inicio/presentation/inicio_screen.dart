@@ -71,6 +71,13 @@ class InicioScreen extends ConsumerWidget {
             subtitulo: 'Nota SBAR y balance de líquidos',
             ruta: Rutas.turno,
           ),
+          opcion(
+            key: 'menu-metricas',
+            icono: Icons.insights_outlined,
+            titulo: 'Métricas de validación',
+            subtitulo: 'Aceptación y edición de los borradores de la IA',
+            ruta: Rutas.metricas,
+          ),
         ],
       ),
     );

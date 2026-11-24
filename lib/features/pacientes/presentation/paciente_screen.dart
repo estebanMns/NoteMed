@@ -12,6 +12,8 @@ import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
 import 'package:notemed/features/notas/domain/servicio_ia.dart';
 import 'package:notemed/features/privacidad/domain/protector_privacidad.dart';
 import 'package:notemed/features/notas/presentation/fallecimiento_screen.dart';
+import 'package:notemed/features/notas/presentation/traslado_screen.dart';
+import 'package:notemed/features/notas/domain/turno/datos_turno.dart';
 import 'package:notemed/features/notas/presentation/borrador_screen.dart';
 import 'package:notemed/features/notas/domain/nota_clinica.dart';
 import 'package:notemed/features/notas/application/servicio_notas.dart';
@@ -156,7 +158,10 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
     }
   }
 
-  Future<void> _generarNotaTurno() => _conManejoDeErrores(() async {
+  /// Guarda los signos, reúne lo registrado y pide la nota con [pedir].
+  Future<void> _generarConDatos(
+    Future<ResultadoSolicitud> Function(DatosTurno datos) pedir,
+  ) => _conManejoDeErrores(() async {
     if (!await _guardarSignos(avisar: false)) {
       _aviso('Corrija los signos vitales antes de generar la nota');
       return;
@@ -165,9 +170,28 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
       _paciente,
       observaciones: _observaciones.text,
     );
-    await _resultado(await _servicio.notaTurno(datos));
+    final r = await pedir(datos);
+    if (!mounted) return;
+    await _resultado(r);
     await _cargar();
   });
+
+  Future<void> _generarNotaTurno() => _generarConDatos(_servicio.notaTurno);
+
+  Future<void> _notaEvolucion() => _generarConDatos(_servicio.notaEvolucion);
+
+  Future<void> _notaTraslado() async {
+    await _abrir<void>(
+      TrasladoScreen(
+        onGenerar: (traslado) => _generarConDatos((datos) async {
+          final r = await _servicio.notaTraslado(datos, traslado);
+          if (mounted) Navigator.of(context).pop();
+          return r;
+        }),
+      ),
+    );
+    await _cargar();
+  }
 
   Future<void> _notaFallecimiento() async {
     await _abrir<void>(
@@ -188,18 +212,43 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
   }
 
   Future<void> _abrirBorrador(NotaClinica nota) async {
+    final revision = Stopwatch()..start();
     await _abrir<bool>(
       BorradorScreen(
         titulo: nota.tipo.etiqueta,
         textoInicial: nota.texto,
         revisar: ServicioNotas.revisor(nota),
-        onFirmar: (texto, firma) async {
-          await _repo.guardarNota(nota.firmar(texto, firma));
-        },
+        tarjetaProfesional: _tarjetaProfesional,
+        onFirmar: (texto, firma) => _servicio.firmar(
+          nota,
+          texto,
+          firma,
+          tiempoRevision: revision.elapsed,
+        ),
       ),
     );
     await _cargar();
   }
+
+  /// La nota firmada no cambia: la corrección queda en una nota nueva.
+  Future<void> _aclarar(NotaClinica original) async {
+    await _abrir<bool>(
+      BorradorScreen(
+        titulo: TipoNota.aclaracion.etiqueta,
+        textoInicial: '',
+        revisar: ServicioNotas.revisorAclaracion,
+        aviso:
+            'Aclaración de la ${original.tipo.etiqueta.toLowerCase()} del '
+            '${formatearFechaHora(original.creada)}. La nota original no se '
+            'modifica.',
+        tarjetaProfesional: _tarjetaProfesional,
+        onFirmar: (texto, firma) => _servicio.aclarar(original, texto, firma),
+      ),
+    );
+    await _cargar();
+  }
+
+  String? get _tarjetaProfesional => null;
 
   Future<void> _verNota(NotaClinica nota) async {
     if (nota.firma == null) return _abrirBorrador(nota);
@@ -208,13 +257,46 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
       builder: (_) => AlertDialog(
         title: Text(nota.tipo.etiqueta),
         content: SingleChildScrollView(
-          child: Text(
-            '${nota.texto}\n\nFirmada · Tarjeta profesional '
-            '${nota.firma!.tarjetaProfesional} · '
-            '${formatearFechaHora(nota.firma!.fecha)}',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(nota.texto),
+              const SizedBox(height: 12),
+              Text(
+                'Firmada · Tarjeta profesional '
+                '${nota.firma!.tarjetaProfesional} · '
+                '${formatearFechaHora(nota.firma!.fecha)}',
+              ),
+              Row(
+                key: const Key('nota-integridad'),
+                children: [
+                  Icon(
+                    nota.integra ? Icons.verified_outlined : Icons.gpp_bad,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      nota.integra
+                          ? 'Contenido sin cambios desde la firma'
+                          : 'El contenido no coincide con la firma',
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
         actions: [
+          TextButton(
+            key: const Key('nota-aclarar'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _aclarar(nota);
+            },
+            child: const Text('Agregar nota aclaratoria'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cerrar'),
@@ -276,6 +358,16 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
           ),
           PopupMenuButton<void>(
             itemBuilder: (_) => [
+              PopupMenuItem(
+                key: const Key('menu-evolucion'),
+                onTap: _notaEvolucion,
+                child: const Text('Nota de evolución'),
+              ),
+              PopupMenuItem(
+                key: const Key('menu-traslado'),
+                onTap: _notaTraslado,
+                child: const Text('Nota de traslado'),
+              ),
               PopupMenuItem(
                 key: const Key('menu-fallecimiento'),
                 onTap: _notaFallecimiento,
@@ -488,7 +580,8 @@ class _PacienteScreenState extends ConsumerState<PacienteScreen> {
                       title: Text(n.tipo.etiqueta),
                       subtitle: Text(
                         '${formatearFechaHora(n.creada)} · '
-                        '${n.firma == null ? 'Borrador sin firmar' : 'Firmada'}',
+                        '${n.firma == null ? 'Borrador sin firmar' : 'Firmada'}'
+                        '${n.aclaraA == null ? '' : ' · Aclara la nota ${n.aclaraA}'}',
                       ),
                       onTap: () => _verNota(n),
                     ),

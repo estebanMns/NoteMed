@@ -13,7 +13,9 @@ import 'package:notemed/core/datos/clave_base_datos.dart';
 class BaseDatosLocal {
   BaseDatosLocal._();
 
-  static const int version = 1;
+  /// 1: esquema inicial (HU07). 2: nota firmada inmutable, nota aclaratoria
+  /// y métricas de validación.
+  static const int version = 2;
   static const String nombreArchivo = 'notemed_cifrada.db';
 
   /// Archivo sin cifrar de versiones anteriores. Solo tuvo datos sintéticos.
@@ -33,6 +35,7 @@ class BaseDatosLocal {
         password: password,
         onConfigure: _configurar,
         onCreate: (db, _) => _crear(db),
+        onUpgrade: _migrar,
       ),
     );
   }
@@ -54,6 +57,48 @@ class BaseDatosLocal {
       db.execute('PRAGMA foreign_keys = ON');
 
   static Future<void> _crear(Database db) async {
+    await _crearV1(db);
+    await _migrar(db, 1, version);
+  }
+
+  static Future<void> _migrar(Database db, int desde, int hasta) async {
+    if (desde < 2 && hasta >= 2) await _migrarA2(db);
+  }
+
+  static Future<void> _migrarA2(Database db) async {
+    final b = db.batch()
+      ..execute('ALTER TABLE notas ADD COLUMN version_prompts TEXT')
+      ..execute(
+        'ALTER TABLE notas ADD COLUMN aclara_a INTEGER REFERENCES notas(id)',
+      )
+      ..execute('ALTER TABLE notas ADD COLUMN hash TEXT')
+      // Defensa adicional: la base rechaza cambios a una nota firmada aunque
+      // algún código se salte el repositorio.
+      ..execute('''
+        CREATE TRIGGER notas_firmadas_inmutables
+        BEFORE UPDATE ON notas
+        WHEN OLD.firma IS NOT NULL
+        BEGIN
+          SELECT RAISE(ABORT, 'nota firmada inmutable');
+        END''')
+      // Sin llave foránea: las métricas no tienen datos del paciente y deben
+      // conservarse para el informe aunque se borre el paciente del celular.
+      ..execute('''
+        CREATE TABLE metricas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nota_id INTEGER NOT NULL,
+          tipo TEXT NOT NULL,
+          generada TEXT NOT NULL,
+          firmada TEXT NOT NULL,
+          palabras_borrador INTEGER NOT NULL,
+          porcentaje_edicion REAL NOT NULL,
+          segundos_revision INTEGER,
+          version_prompts TEXT
+        )''');
+    await b.commit(noResult: true);
+  }
+
+  static Future<void> _crearV1(Database db) async {
     const fk = 'REFERENCES pacientes(id) ON DELETE CASCADE';
     final b = db.batch()
       ..execute('''

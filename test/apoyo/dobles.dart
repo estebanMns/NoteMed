@@ -6,6 +6,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:notemed/app/app.dart';
 import 'package:notemed/app/providers.dart';
 import 'package:notemed/features/notas/application/servicio_notas.dart';
+import 'package:notemed/features/metricas/domain/metrica_nota.dart';
+import 'package:notemed/features/metricas/domain/repositorio_metricas.dart';
 
 import 'package:notemed/core/red/estado_red.dart';
 import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
@@ -161,6 +163,9 @@ class RepositorioMemoria implements RepositorioPacientes {
 
   @override
   Future<NotaClinica> guardarNota(NotaClinica n) async {
+    if (n.id != null && _notas[n.id]?.firma != null) {
+      throw NotaFirmadaInmutable(n.id);
+    }
     final g = n.id == null ? n.conId(++_sec) : n;
     _notas[g.id!] = g;
     return g;
@@ -206,20 +211,42 @@ Widget conDependencias({
   ServicioIA? ia,
   EstadoRed? red,
   ServicioNotas? servicio,
+  RepositorioMetricas? metricas,
   Widget? hijo,
 }) {
+  final metricasUsadas = metricas ?? MetricasMemoria();
   final iaUsada = ia ?? IASimulada();
   final redUsada = red ?? RedSimulada();
   return ProviderScope(
     overrides: [
       repositorioProvider.overrideWithValue(repo),
+      repositorioMetricasProvider.overrideWithValue(metricasUsadas),
       servicioIAProvider.overrideWithValue(iaUsada),
       estadoRedProvider.overrideWithValue(redUsada),
       servicioNotasProvider.overrideWithValue(
         servicio ??
-            ServicioNotas(repositorio: repo, ia: iaUsada, red: redUsada),
+            ServicioNotas(
+              repositorio: repo,
+              ia: iaUsada,
+              red: redUsada,
+              metricas: metricasUsadas,
+            ),
       ),
     ],
     child: hijo == null ? const NoteMedApp() : MaterialApp(home: hijo),
   );
+}
+
+/// Métricas en memoria.
+class MetricasMemoria implements RepositorioMetricas {
+  final List<MetricaNota> lista = [];
+
+  @override
+  Future<MetricaNota> registrar(MetricaNota m) async {
+    lista.add(m);
+    return m;
+  }
+
+  @override
+  Future<List<MetricaNota>> metricas() async => List.of(lista);
 }

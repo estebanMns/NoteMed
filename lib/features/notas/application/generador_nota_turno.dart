@@ -21,13 +21,19 @@ class GeneradorNotaTurno {
   final RedactorPrivado _redactor;
   final DiccionarioMedico diccionario;
 
-  Future<RevisionNota> generar(DatosTurno d) async {
+  /// Genera la nota de turno. Las notas de evolución y traslado usan el
+  /// mismo flujo con sus propias instrucciones ([sistema]) y [solicitud].
+  Future<RevisionNota> generar(
+    DatosTurno d, {
+    String? sistema,
+    String? solicitud,
+  }) async {
     final respuesta = await _redactor.redactar(
       nombre: d.paciente.nombre,
       cedula: d.paciente.cedula,
       cama: d.paciente.cama,
-      sistema: instruccionesNotaTurno(diccionario),
-      solicitud: construirSolicitudTurno(d),
+      sistema: sistema ?? instruccionesNotaTurno(diccionario),
+      solicitud: solicitud ?? construirSolicitudTurno(d),
     );
     return revisarNota(
       respuesta.texto,

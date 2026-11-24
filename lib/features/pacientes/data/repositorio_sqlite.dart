@@ -180,11 +180,38 @@ class RepositorioSqlite implements RepositorioPacientes {
       'creada': n.creada.toIso8601String(),
       'referencia': jsonEncode(n.referencia),
       'firma': n.firma == null ? null : jsonEncode(n.firma!.toMap()),
+      'version_prompts': n.versionPrompts,
+      'aclara_a': n.aclaraA,
+      'hash': n.hash,
     };
     if (n.id == null) return n.conId(await db.insert('notas', fila));
+    final actual = await db.query(
+      'notas',
+      columns: ['firma'],
+      where: 'id = ?',
+      whereArgs: [n.id],
+    );
+    if (actual.isNotEmpty && actual.first['firma'] != null) {
+      throw NotaFirmadaInmutable(n.id);
+    }
     await db.update('notas', fila, where: 'id = ?', whereArgs: [n.id]);
     return n;
   }
+
+  static NotaClinica _nota(Map<String, Object?> f) => NotaClinica(
+    id: f['id']! as int,
+    pacienteId: f['paciente_id']! as int,
+    tipo: TipoNota.values.byName(f['tipo']! as String),
+    texto: f['texto']! as String,
+    creada: DateTime.parse(f['creada']! as String),
+    referencia: _json(f['referencia']),
+    firma: f['firma'] == null
+        ? null
+        : FirmaEnfermera.fromMap(_json(f['firma'])),
+    versionPrompts: f['version_prompts'] as String?,
+    aclaraA: f['aclara_a'] as int?,
+    hash: f['hash'] as String?,
+  );
 
   @override
   Future<List<NotaClinica>> notas(int pacienteId) async => [
@@ -194,17 +221,7 @@ class RepositorioSqlite implements RepositorioPacientes {
       whereArgs: [pacienteId],
       orderBy: 'creada DESC, id DESC',
     ))
-      NotaClinica(
-        id: f['id']! as int,
-        pacienteId: pacienteId,
-        tipo: TipoNota.values.byName(f['tipo']! as String),
-        texto: f['texto']! as String,
-        creada: DateTime.parse(f['creada']! as String),
-        referencia: _json(f['referencia']),
-        firma: f['firma'] == null
-            ? null
-            : FirmaEnfermera.fromMap(_json(f['firma'])),
-      ),
+      _nota(f),
   ];
 
   @override

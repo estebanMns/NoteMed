@@ -8,6 +8,9 @@ import 'package:sqflite_common/sqlite_api.dart';
 
 import 'package:notemed/core/red/estado_red.dart';
 import 'package:notemed/core/red/estado_red_dispositivo.dart';
+import 'package:notemed/features/metricas/data/repositorio_metricas_sqlite.dart';
+import 'package:notemed/features/metricas/domain/metrica_nota.dart';
+import 'package:notemed/features/metricas/domain/repositorio_metricas.dart';
 import 'package:notemed/features/notas/application/servicio_notas.dart';
 import 'package:notemed/features/notas/data/ia/claude_servicio_ia.dart';
 import 'package:notemed/features/notas/data/ia/servicio_ia_remoto.dart';
@@ -50,6 +53,16 @@ final repositorioProvider = Provider<RepositorioPacientes>(
   (ref) => RepositorioSqlite(ref.watch(baseDatosProvider)),
 );
 
+final repositorioMetricasProvider = Provider<RepositorioMetricas>(
+  (ref) => RepositorioMetricasSqlite(ref.watch(baseDatosProvider)),
+);
+
+/// Métricas de validación (tasa de aceptación y de edición).
+final resumenMetricasProvider = FutureProvider<ResumenMetricas>(
+  (ref) async =>
+      ResumenMetricas(await ref.watch(repositorioMetricasProvider).metricas()),
+);
+
 final estadoRedProvider = Provider<EstadoRed>((ref) => EstadoRedDispositivo());
 
 final servicioIAProvider = Provider<ServicioIA>(
@@ -67,6 +80,7 @@ final servicioNotasProvider = Provider<ServicioNotas>((ref) {
     repositorio: ref.watch(repositorioProvider),
     ia: ref.watch(servicioIAProvider),
     red: ref.watch(estadoRedProvider),
+    metricas: ref.watch(repositorioMetricasProvider),
   );
   servicio.cola.iniciar();
   ref.onDispose(servicio.cola.detener);

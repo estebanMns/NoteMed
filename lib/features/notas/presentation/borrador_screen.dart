@@ -16,6 +16,9 @@ class BorradorScreen extends StatefulWidget {
     required this.revisar,
     required this.onFirmar,
     this.ahora = DateTime.now,
+    this.aviso =
+        'Borrador generado por IA. Revíselo y corríjalo antes de firmar.',
+    this.tarjetaProfesional,
   });
 
   final String titulo;
@@ -26,6 +29,12 @@ class BorradorScreen extends StatefulWidget {
   /// termina.
   final Future<void> Function(String texto, FirmaEnfermera firma) onFirmar;
   final DateTime Function() ahora;
+
+  /// Texto que se muestra arriba del editor.
+  final String aviso;
+
+  /// Tarjeta de la enfermera con sesión, para llenar el modal de firma.
+  final String? tarjetaProfesional;
 
   @override
   State<BorradorScreen> createState() => _BorradorScreenState();
@@ -43,7 +52,11 @@ class _BorradorScreenState extends State<BorradorScreen> {
   }
 
   Future<void> _firmar() async {
-    final firma = await mostrarFirmaModal(context, ahora: widget.ahora);
+    final firma = await mostrarFirmaModal(
+      context,
+      ahora: widget.ahora,
+      tarjetaInicial: widget.tarjetaProfesional,
+    );
     if (firma == null || !mounted) return;
     setState(() => _guardando = true);
     try {
@@ -63,10 +76,7 @@ class _BorradorScreenState extends State<BorradorScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            'Borrador generado por IA. Revíselo y corríjalo antes de firmar.',
-            style: TextStyle(color: esquema.onSurfaceVariant),
-          ),
+          Text(widget.aviso, style: TextStyle(color: esquema.onSurfaceVariant)),
           const SizedBox(height: 12),
           TextField(
             key: const Key('borrador-texto'),

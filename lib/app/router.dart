@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:notemed/app/providers.dart';
 import 'package:notemed/features/inicio/presentation/inicio_screen.dart';
+import 'package:notemed/features/metricas/presentation/metricas_screen.dart';
 import 'package:notemed/features/notas/presentation/entrega_turno_screen.dart';
 import 'package:notemed/features/pacientes/presentation/paciente_screen.dart';
 import 'package:notemed/features/pacientes/presentation/pacientes_screen.dart';
@@ -22,6 +23,7 @@ abstract final class Rutas {
   static const braden = '/braden';
   static const downton = '/downton';
   static const turno = '/turno';
+  static const metricas = '/metricas';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -45,6 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'braden', builder: (_, _) => const BradenScreen()),
           GoRoute(path: 'downton', builder: (_, _) => const DowntonScreen()),
           GoRoute(path: 'turno', builder: (_, _) => const EntregaTurnoScreen()),
+          GoRoute(path: 'metricas', builder: (_, _) => const MetricasScreen()),
         ],
       ),
     ],

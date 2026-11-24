@@ -13,6 +13,7 @@ from app.config import Settings, get_settings
 from app.db.sesion import crear_motor, crear_tablas, fabrica_sesiones
 from app.domain.errores import (
     ConflictoVersion,
+    CredencialesInvalidas,
     DatosNoSeguros,
     ErrorDominio,
     LlmNoDisponible,
@@ -23,6 +24,7 @@ from app.domain.errores import (
     PacienteExistente,
     PacienteNoEncontrado,
     TransicionInvalida,
+    UsuarioExistente,
 )
 from app.ia.modelo import ModeloLenguaje, crear_modelo
 
@@ -30,6 +32,8 @@ _CODIGOS: dict[type[ErrorDominio], tuple[int, str]] = {
     NotaNoEncontrada: (404, "nota_no_encontrada"),
     PacienteNoEncontrado: (404, "paciente_no_encontrado"),
     PacienteExistente: (409, "paciente_existente"),
+    UsuarioExistente: (409, "usuario_existente"),
+    CredencialesInvalidas: (401, "credenciales_invalidas"),
     ConflictoVersion: (409, "conflicto_version"),
     TransicionInvalida: (409, "transicion_invalida"),
     NoAutorizado: (403, "no_autorizado"),

@@ -2,7 +2,7 @@
 
 Reglas de autorización:
   * crear, revisar y firmar: solo el enfermero autor de la nota;
-  * consultar: el autor o un supervisor (solo lectura de métricas y notas).
+  * consultar: el autor o un jefe (solo lectura de métricas y notas).
 
 Control de concurrencia: cada cambio exige la `version` leída por el cliente
 y se aplica con UPDATE condicional (atómico en PostgreSQL), así dos
@@ -90,7 +90,7 @@ class ServicioNotas:
     def notas_del_paciente(self, actor: Actor, paciente_id: str) -> list[NotaORM]:
         self.obtener_paciente(paciente_id)
         consulta = select(NotaORM).where(NotaORM.paciente_id == paciente_id).order_by(NotaORM.creada_en)
-        if actor.rol != "supervisor":
+        if actor.rol != "jefe":
             consulta = consulta.where(NotaORM.creada_por == actor.sub)
         return list(self._s.scalars(consulta))
 
@@ -140,7 +140,7 @@ class ServicioNotas:
         nota = self._s.get(NotaORM, nota_id)
         if nota is None:
             raise NotaNoEncontrada("Nota no encontrada.")
-        if actor.rol != "supervisor":
+        if actor.rol != "jefe":
             self._exigir_autor(actor, nota)
         return nota
 
@@ -200,8 +200,8 @@ class ServicioNotas:
     # ---------- métricas (PDF §2.3.4: aceptación y edición) ----------
 
     def metricas_borradores(self, actor: Actor) -> MetricasBorradores:
-        if actor.rol != "supervisor":
-            raise NoAutorizado("Solo un supervisor consulta las métricas.")
+        if actor.rol != "jefe":
+            raise NoAutorizado("Solo la jefa o el jefe de enfermería consulta las métricas.")
         firmadas = list(self._s.scalars(select(NotaORM).where(NotaORM.estado == EstadoNota.FIRMADA.value)))
         total = self._s.scalar(select(func.count()).select_from(NotaORM))
         sin_edicion = sum(1 for n in firmadas if n.texto_final == n.texto_borrador)
@@ -227,12 +227,12 @@ class ServicioNotas:
 
     @staticmethod
     def _exigir_enfermero(actor: Actor) -> None:
-        if actor.rol != "enfermero":
+        if actor.rol != "enfermera":
             raise NoAutorizado("Solo el personal de enfermería puede realizar esta acción.")
 
     @staticmethod
     def _exigir_autor(actor: Actor, nota: NotaORM) -> None:
-        if nota.creada_por != actor.sub and actor.rol != "supervisor":
+        if nota.creada_por != actor.sub and actor.rol != "jefe":
             raise NoAutorizado("La nota pertenece a otro profesional.")
 
     @staticmethod

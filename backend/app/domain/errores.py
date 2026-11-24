@@ -46,3 +46,11 @@ class PacienteExistente(ErrorDominio):
 
 class NoAutenticado(ErrorDominio):
     """Token ausente, inválido o vencido."""
+
+
+class CredencialesInvalidas(ErrorDominio):
+    """Usuario o clave incorrectos. El mensaje no revela cuál de los dos falló."""
+
+
+class UsuarioExistente(ErrorDominio):
+    pass

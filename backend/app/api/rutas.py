@@ -7,24 +7,29 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
-from app.api.dependencias import get_actor, get_actor_ia, get_servicio
+from app.api.dependencias import get_actor, get_actor_ia, get_servicio, get_sesion
 from app.api.esquemas import (
     BorradorEntrada,
     FirmaEntrada,
     IaRespuesta,
     IaSolicitudEntrada,
+    LoginEntrada,
     MetricasSalida,
     NotaSalida,
     PacienteEntrada,
     PacienteSalida,
     RevisionEntrada,
+    SesionSalida,
+    UsuarioSesion,
 )
 from app.db.modelos import NotaORM
 from app.domain.nota import TipoNota
 from app.fhir import documento_fhir
 from app.ia.texto_libre import generar_texto
 from app.seguridad import Actor
+from app.servicios.autenticacion import ServicioAutenticacion
 from app.servicios.notas import ServicioNotas
 
 router = APIRouter(prefix="/v1")
@@ -78,6 +83,27 @@ def crear_borrador(
     )
     response.status_code = status.HTTP_201_CREATED if resultado.creada else status.HTTP_200_OK
     return _nota_salida(resultado.nota)
+
+
+@router.post("/auth/sesiones", response_model=SesionSalida)
+def iniciar_sesion(
+    entrada: LoginEntrada,
+    request: Request,
+    sesion: Annotated[Session, Depends(get_sesion)],
+) -> SesionSalida:
+    """Contrato sección 2: usuario y clave -> JWT."""
+    datos = ServicioAutenticacion(sesion, request.app.state.settings).iniciar_sesion(
+        entrada.usuario, entrada.clave
+    )
+    return SesionSalida(
+        token=datos.token,
+        expira=datos.expira,
+        usuario=UsuarioSesion(
+            usuario=datos.usuario,
+            tarjetaProfesional=datos.tarjeta_profesional,
+            rol=datos.rol,
+        ),
+    )
 
 
 @router.post("/ia/borradores", response_model=IaRespuesta)

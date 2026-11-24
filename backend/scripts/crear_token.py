@@ -17,7 +17,7 @@ from app.seguridad import crear_token
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Emite un token JWT de desarrollo.")
     parser.add_argument("--sub", required=True, help="Código de usuario, p. ej. ENF-01")
-    parser.add_argument("--rol", required=True, choices=["enfermero", "supervisor"])
+    parser.add_argument("--rol", required=True, choices=["enfermera", "jefe"])
     args = parser.parse_args(argv)
 
     settings = get_settings()

@@ -46,14 +46,14 @@ def cabecera(settings: Settings, sub: str, rol: str) -> dict[str, str]:
 
 @pytest.fixture
 def enfermera(settings: Settings) -> dict[str, str]:
-    return cabecera(settings, "ENF-01", "enfermero")
+    return cabecera(settings, "ENF-01", "enfermera")
 
 
 @pytest.fixture
 def otra_enfermera(settings: Settings) -> dict[str, str]:
-    return cabecera(settings, "ENF-02", "enfermero")
+    return cabecera(settings, "ENF-02", "enfermera")
 
 
 @pytest.fixture
-def supervisor(settings: Settings) -> dict[str, str]:
-    return cabecera(settings, "SUP-01", "supervisor")
+def jefe(settings: Settings) -> dict[str, str]:
+    return cabecera(settings, "SUP-01", "jefe")

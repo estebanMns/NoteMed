@@ -36,7 +36,7 @@ def _cliente(settings: Settings, modelo: _Modelo) -> TestClient:
 def cabecera(settings: Settings) -> dict[str, str]:
     from app.seguridad import crear_token
 
-    return {"Authorization": f"Bearer {crear_token('ENF-01', 'enfermero', settings)}"}
+    return {"Authorization": f"Bearer {crear_token('ENF-01', 'enfermera', settings)}"}
 
 
 def test_devuelve_texto_y_pasa_las_instrucciones_tal_cual(settings, cabecera):

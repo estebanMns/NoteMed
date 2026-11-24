@@ -12,7 +12,7 @@ revisión y firma. Corresponde a la parte de backend e IA del PDF (§3.4).
 | Lenguaje | Python 3.13, FastAPI, Pydantic v2 | Validación estricta de contratos y documentación OpenAPI |
 | Persistencia | SQLAlchemy 2 · PostgreSQL 16 (producción) · SQLite (pruebas) | Integridad referencial y ACID (Res. 1995/1999) |
 | Esquema | Alembic | Cambios de BD versionados; producción nunca usa `create_all` |
-| Identidad | JWT con rol (`enfermero`, `supervisor`), identificado por código de usuario | No se guardan nombres del personal |
+| Identidad | Usuario y clave (scrypt) → JWT con rol (`enfermera` o `jefe`). Sin registro público: lo da de alta una persona administradora | La clave nunca se guarda en claro; el token no lleva nombres |
 | IA | Puerto `ModeloLenguaje` + adaptadores (`simulado`, `http` compatible con chat completions) | Cambiar de proveedor no toca la lógica clínica |
 | Privacidad | Seudonimización antes del modelo + barrera que aborta si queda un dato identificable | Ley 1581; defensa en profundidad |
 | Verificación | Cadena de verificación determinista: cifras y códigos deben existir en la entrada; filtro de siglas | Detecta alucinaciones (PDF §2.2.5) |
@@ -49,18 +49,33 @@ backend/
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
-| POST | `/v1/pacientes` | enfermero | Registra un paciente por seudónimo (`PAC-###`) |
-| GET | `/v1/pacientes/{id}/notas` | autor / supervisor | Notas del paciente |
-| POST | `/v1/notas/borradores` | enfermero | Genera el borrador con IA (201; 200 si ya existía) |
-| GET | `/v1/notas/{id}` | autor / supervisor | Detalle, texto y hallazgos |
+| POST | `/v1/auth/sesiones` | público | Usuario y clave → JWT (contrato sección 2) |
+| POST | `/v1/pacientes` | enfermera | Registra un paciente por seudónimo (`PAC-###`) |
+| GET | `/v1/pacientes/{id}/notas` | autor / jefe | Notas del paciente |
+| POST | `/v1/notas/borradores` | enfermera | Genera el borrador con IA (201; 200 si ya existía) |
+| GET | `/v1/notas/{id}` | autor / jefe | Detalle, texto y hallazgos |
 | PUT | `/v1/notas/{id}/revision` | autor | Guarda la revisión (requiere `version`) |
 | POST | `/v1/notas/{id}/firma` | autor | Firma (requiere `version`) |
-| GET | `/v1/notas/{id}/fhir` | autor / supervisor | Documento FHIR |
-| GET | `/v1/metricas/borradores` | supervisor | Aceptación y tasa de edición |
+| GET | `/v1/notas/{id}/fhir` | autor / jefe | Documento FHIR |
+| GET | `/v1/metricas/borradores` | jefe | Aceptación y tasa de edición |
 | GET | `/health` | público | Estado del servicio |
 
 Errores con cuerpo `{"error": "...", "mensaje": "...", "motivos": [...]}`:
 401 sin token válido · 403 sin permiso · 404 · 409 conflicto de versión o estado · 422 nota no firmable o datos no seguros · 503 la IA no respondió.
+
+## Personal y roles
+
+- **`enfermera`:** registra pacientes, genera borradores, revisa y firma sus propias notas.
+- **`jefe`:** consulta las métricas de validación (`GET /v1/metricas/borradores`). No firma notas ajenas.
+
+Los usuarios los da de alta una persona administradora (no hay registro público):
+
+```bash
+NOTEMED_DATABASE_URL=sqlite:///./notemed.db ./.venv/bin/python -m scripts.crear_usuario \
+  --usuario enfermera1 --tarjeta TP-10001 --rol enfermera
+```
+
+La clave se pide por consola (mínimo 10 caracteres).
 
 ## Puesta en marcha (desarrollo)
 

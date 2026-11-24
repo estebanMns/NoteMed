@@ -56,6 +56,23 @@ class IaRespuesta(BaseModel):
     texto: str
 
 
+class LoginEntrada(_Entrada):
+    usuario: Annotated[str, StringConstraints(min_length=1, max_length=64)]
+    clave: Annotated[str, StringConstraints(min_length=1, max_length=256)]
+
+
+class UsuarioSesion(BaseModel):
+    usuario: str
+    tarjetaProfesional: str
+    rol: str
+
+
+class SesionSalida(BaseModel):
+    token: str
+    expira: datetime
+    usuario: UsuarioSesion
+
+
 class FirmaEntrada(_Entrada):
     version: int = Field(ge=1)
 

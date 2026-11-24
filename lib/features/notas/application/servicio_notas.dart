@@ -36,7 +36,7 @@ class SolicitudEnCola extends ResultadoSolicitud {
 class ServicioNotas {
   ServicioNotas({
     required this.repositorio,
-    required ServicioIA ia,
+    required this.ia,
     required this.red,
     DateTime Function()? ahora,
   }) : _turno = GeneradorNotaTurno(ia),
@@ -46,10 +46,12 @@ class ServicioNotas {
       repositorio: repositorio,
       red: red,
       procesar: _procesarPendiente,
+      requiereRed: !ia.funcionaSinRed,
     );
   }
 
   final RepositorioPacientes repositorio;
+  final ServicioIA ia;
   final EstadoRed red;
   final GeneradorNotaTurno _turno;
   final GeneradorNotaFallecimiento _fallecimiento;
@@ -97,7 +99,7 @@ class ServicioNotas {
   );
 
   Future<ResultadoSolicitud> _solicitar(SolicitudPendiente s) async {
-    if (!await red.conectado()) {
+    if (!ia.funcionaSinRed && !await red.conectado()) {
       return SolicitudEnCola(await cola.encolar(s));
     }
     try {

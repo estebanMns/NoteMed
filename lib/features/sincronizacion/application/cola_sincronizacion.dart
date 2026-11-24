@@ -17,6 +17,7 @@ class ColaSincronizacion {
     required this.repositorio,
     required this.red,
     required this.procesar,
+    this.requiereRed = true,
   });
 
   final RepositorioPacientes repositorio;
@@ -25,6 +26,10 @@ class ColaSincronizacion {
   /// Genera y guarda la nota de una solicitud. Si lanza, la solicitud
   /// queda en la cola.
   final Future<void> Function(SolicitudPendiente) procesar;
+
+  /// `false` cuando la IA funciona en el celular: la cola se procesa aunque
+  /// no haya red.
+  final bool requiereRed;
 
   /// Cantidad de solicitudes en espera, para mostrar en pantalla.
   final ValorObservable<int> cantidad = ValorObservable(0);
@@ -63,7 +68,7 @@ class ColaSincronizacion {
   Future<int> _procesar() async {
     var completadas = 0;
     try {
-      if (!await red.conectado()) return 0;
+      if (requiereRed && !await red.conectado()) return 0;
       for (final s in await repositorio.pendientes()) {
         try {
           await procesar(s);

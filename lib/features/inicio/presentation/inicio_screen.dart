@@ -1,16 +1,18 @@
 /// Menú principal de la app.
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:notemed/app/providers.dart';
 import 'package:notemed/app/router.dart';
 
-class InicioScreen extends StatelessWidget {
+class InicioScreen extends ConsumerWidget {
   const InicioScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     Widget opcion({
       required String key,
       required IconData icono,
@@ -33,6 +35,14 @@ class InicioScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Chip(
+              key: const Key('modo-ia'),
+              avatar: const Icon(Icons.auto_awesome_outlined, size: 18),
+              label: Text(ref.watch(modoIAProvider).etiqueta),
+            ),
+          ),
           opcion(
             key: 'menu-pacientes',
             icono: Icons.people_outline,

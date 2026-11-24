@@ -10,13 +10,36 @@ import 'package:notemed/core/red/estado_red.dart';
 import 'package:notemed/core/red/estado_red_dispositivo.dart';
 import 'package:notemed/features/notas/application/servicio_notas.dart';
 import 'package:notemed/features/notas/data/ia/claude_servicio_ia.dart';
+import 'package:notemed/features/notas/data/ia/servicio_ia_remoto.dart';
+import 'package:notemed/features/notas/data/ia/servicio_ia_simulado.dart';
 import 'package:notemed/features/notas/domain/servicio_ia.dart';
 import 'package:notemed/features/pacientes/data/repositorio_sqlite.dart';
 import 'package:notemed/features/pacientes/domain/paciente.dart';
 import 'package:notemed/features/pacientes/domain/repositorio_pacientes.dart';
 
-/// Clave de la API de Claude: `flutter run --dart-define=ANTHROPIC_API_KEY=...`
-const _claveIA = String.fromEnvironment('ANTHROPIC_API_KEY');
+/// URL del backend: `flutter run --dart-define=NOTEMED_API_URL=https://...`
+const _urlBackend = String.fromEnvironment('NOTEMED_API_URL');
+
+/// Solo para demostraciones: `--dart-define=ANTHROPIC_API_KEY=...`
+const _claveClaude = String.fromEnvironment('ANTHROPIC_API_KEY');
+
+enum ModoIA {
+  simulada('IA simulada (sin internet)'),
+  servidor('IA del servidor del hospital'),
+  claudeDirecto('Claude directo (solo demostración)');
+
+  const ModoIA(this.etiqueta);
+  final String etiqueta;
+}
+
+/// Qué IA usa la app, según cómo se compiló.
+final modoIAProvider = Provider<ModoIA>(
+  (ref) => _urlBackend.isNotEmpty
+      ? ModoIA.servidor
+      : _claveClaude.isNotEmpty
+      ? ModoIA.claudeDirecto
+      : ModoIA.simulada,
+);
 
 /// Base de datos abierta en `main()`. Se sobrescribe al iniciar la app.
 final baseDatosProvider = Provider<Database>(
@@ -30,9 +53,11 @@ final repositorioProvider = Provider<RepositorioPacientes>(
 final estadoRedProvider = Provider<EstadoRed>((ref) => EstadoRedDispositivo());
 
 final servicioIAProvider = Provider<ServicioIA>(
-  (ref) => _claveIA.isEmpty
-      ? const ServicioIANoConfigurado()
-      : ClaudeServicioIA(apiKey: _claveIA),
+  (ref) => switch (ref.watch(modoIAProvider)) {
+    ModoIA.simulada => const ServicioIASimulado(),
+    ModoIA.servidor => ServicioIARemoto(urlBase: _urlBackend),
+    ModoIA.claudeDirecto => ClaudeServicioIA(apiKey: _claveClaude),
+  },
 );
 
 /// Casos de uso de las notas. Al crearse empieza a procesar la cola de

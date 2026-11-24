@@ -1,8 +1,15 @@
-/// TSK-11 · HU03: contrato del servicio de IA que redacta las notas. La app
-/// usa [ClaudeServicioIA]; las pruebas usan una IA simulada.
+/// TSK-11 · HU03: contrato del servicio de IA que redacta las notas.
+///
+/// Implementaciones (capa de datos): `ServicioIASimulado` (por defecto, sin
+/// internet), `ServicioIARemoto` (backend del proyecto) y
+/// `ClaudeServicioIA` (solo para demostraciones).
 library;
 
 abstract interface class ServicioIA {
+  /// `true` si la IA corre en el celular y no necesita red. Las solicitudes
+  /// a una IA remota se guardan en la cola cuando no hay conexión.
+  bool get funcionaSinRed;
+
   /// Envía [sistema] (instrucciones) y [usuario] (datos ya anonimizados) y
   /// devuelve el texto redactado. Lanza [ErrorIA] si falla.
   Future<String> generar({required String sistema, required String usuario});
@@ -21,19 +28,4 @@ class ErrorIA implements Exception {
 
   @override
   String toString() => 'ErrorIA: $mensaje';
-}
-
-/// Se usa cuando la app se compila sin clave de la API: avisa en lugar de
-/// fallar al iniciar.
-class ServicioIANoConfigurado implements ServicioIA {
-  const ServicioIANoConfigurado();
-
-  @override
-  Future<String> generar({required String sistema, required String usuario}) =>
-      Future.error(
-        const ErrorIA(
-          'La IA no está configurada. Compile la app con '
-          '--dart-define=ANTHROPIC_API_KEY=<clave>.',
-        ),
-      );
 }

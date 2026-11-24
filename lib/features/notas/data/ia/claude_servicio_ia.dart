@@ -1,9 +1,10 @@
-/// TSK-11 · HU03: implementación de [ServicioIA] con la API de Claude
-/// (Anthropic). Dart no tiene SDK oficial, así que se usa HTTP directo.
+/// TSK-11 · HU03: implementación de [ServicioIA] que llama directamente a la
+/// API de Claude (Anthropic) por HTTP.
 ///
-/// La clave se pasa al compilar con `--dart-define=ANTHROPIC_API_KEY=...`.
-/// Una clave dentro de la app se puede extraer del binario: para producción
-/// conviene poner un servidor intermedio y cambiar [url].
+/// SOLO PARA DEMOSTRACIONES. La clave se pasa al compilar con
+/// `--dart-define=ANTHROPIC_API_KEY=...` y queda dentro del binario, de donde
+/// se puede extraer. En el hospital se usa `ServicioIARemoto`: la clave vive
+/// en el backend.
 library;
 
 import 'dart:async';
@@ -32,6 +33,9 @@ class ClaudeServicioIA implements ServicioIA {
   final String url;
   final Duration tiempoMaximo;
   final http.Client _cliente;
+
+  @override
+  bool get funcionaSinRed => false;
 
   static const versionApi = '2026-10-21';
 

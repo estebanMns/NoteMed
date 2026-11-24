@@ -24,6 +24,9 @@ class IASimulada implements ServicioIA {
   IASimulada([this.responder]);
 
   String Function(String sistema, String usuario)? responder;
+
+  @override
+  bool funcionaSinRed = false;
   Object? error;
   final List<({String sistema, String usuario})> recibidas = [];
 

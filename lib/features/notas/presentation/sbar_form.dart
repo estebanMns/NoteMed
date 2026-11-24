@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'sbar_plantilla.dart';
+import 'package:notemed/features/notas/domain/sbar_plantilla.dart';
 
 class SbarForm extends StatefulWidget {
   const SbarForm({super.key, this.inicial = const NotaSbar(), this.onGuardar});

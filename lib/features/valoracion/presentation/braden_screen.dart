@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'braden_escala.dart';
+import 'package:notemed/features/valoracion/domain/braden_escala.dart';
 
 class BradenScreen extends StatefulWidget {
   const BradenScreen({super.key, this.onGuardar});

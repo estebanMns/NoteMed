@@ -1,8 +1,8 @@
 // TSK-05 / TSK-07 · HU02: escala de Braden.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:notemed/features/riesgos/braden/braden_escala.dart';
-import 'package:notemed/features/riesgos/braden/braden_screen.dart';
+import 'package:notemed/features/valoracion/domain/braden_escala.dart';
+import 'package:notemed/features/valoracion/presentation/braden_screen.dart';
 
 EvaluacionBraden _todas(int Function(SubescalaBraden) puntos) {
   var e = const EvaluacionBraden();

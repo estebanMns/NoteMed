@@ -4,9 +4,9 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'balance_liquidos.dart';
-import 'sbar_form.dart';
-import 'sbar_plantilla.dart';
+import 'package:notemed/features/valoracion/domain/balance_liquidos.dart';
+import 'package:notemed/features/notas/presentation/sbar_form.dart';
+import 'package:notemed/features/notas/domain/sbar_plantilla.dart';
 
 class EntregaTurnoScreen extends StatefulWidget {
   const EntregaTurnoScreen({super.key, this.onGuardar});

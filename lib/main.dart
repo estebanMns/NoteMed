@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'features/riesgos/braden/braden_screen.dart';
-import 'features/turno/entrega_turno_screen.dart';
+import 'features/valoracion/presentation/braden_screen.dart';
+import 'features/notas/presentation/entrega_turno_screen.dart';
 
 void main() {
   runApp(const NoteMedApp());

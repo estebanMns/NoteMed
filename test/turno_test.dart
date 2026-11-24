@@ -1,9 +1,9 @@
 // TSK-10 / TSK-12 · HU03: plantilla SBAR y balance de líquidos.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:notemed/features/turno/balance_liquidos.dart';
-import 'package:notemed/features/turno/sbar_form.dart';
-import 'package:notemed/features/turno/sbar_plantilla.dart';
+import 'package:notemed/features/valoracion/domain/balance_liquidos.dart';
+import 'package:notemed/features/notas/presentation/sbar_form.dart';
+import 'package:notemed/features/notas/domain/sbar_plantilla.dart';
 
 void main() {
   group('NotaSbar (TSK-10)', () {
